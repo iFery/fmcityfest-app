@@ -73,3 +73,37 @@ yarn-error.log
 !.yarn/releases
 !.yarn/sdks
 !.yarn/versions
+
+# VSCode settings
+.vscode/
+
+# Metro bundler cache
+.metro-cache/
+.haste-map/
+
+# ESLint cache
+.eslintcache
+
+# Watchman
+.watchmanconfig
+
+# Jest snapshots
+*.test.ts.snap
+
+# Env files (pokud je používáš)
+.env
+.env.local
+.env.production
+.env.development
+.env.test
+
+# Firebase
+*.firebase/
+
+# Android/iOS build artefakty
+*.apk
+*.aab
+*.p8
+*.p12
+*.key
+*.mobileprovision
