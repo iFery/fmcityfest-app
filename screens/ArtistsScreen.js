@@ -1,107 +1,86 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, FlatList, StyleSheet,
-  ScrollView, ActivityIndicator
+  View, Text, TouchableOpacity, FlatList,
+  StyleSheet, ScrollView, ActivityIndicator, StatusBar
 } from 'react-native';
 import { Image } from 'react-native';
-import {
-  saveToCache,
-  loadFromCache,
-  getLastUpdate,
-  setLastUpdate
-} from '../utils/cache';
 import { useNavigation } from '@react-navigation/native';
 import Header from '../components/Header';
 import { useRemoteConfig } from '../context/RemoteConfigProvider';
+import { getAllArtists, getArtistCategories } from '../utils/dataLoader';
 
-export default function InterpretiScreen() {
-  const [interpreti, setInterpreti] = useState([]);
+export default function ArtistsScreen() {
+  const [artists, setArtists] = useState([]);
   const [categories, setCategories] = useState([{ label: 'Všichni', value: 'all' }]);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigation = useNavigation();
   const { config } = useRemoteConfig();
 
   useEffect(() => {
-    const fetchInterpretiIfNeeded = async () => {
+    const loadData = async () => {
       try {
-        const latestArtistsUpdate = config?.last_updates?.artists;
-        console.log('🌐 Last artists update from config:', latestArtistsUpdate);
+        console.log('🔄 ArtistsScreen: Začínám načítat data...');
+        setLoading(true);
+        setError(null);
 
-        const lastFetched = await getLastUpdate('artists');
-        console.log('📱 Last local artists update:', lastFetched);
+        // Načtení interpretů
+        console.log('📥 ArtistsScreen: Načítám interprety...');
+        const artistsData = await getAllArtists(config);
+        console.log('📊 ArtistsScreen: Načteno interpretů:', artistsData.length);
+        setArtists(artistsData);
 
-        const shouldFetch = !lastFetched || new Date(latestArtistsUpdate) > new Date(lastFetched);
+        // Načtení kategorií
+        console.log('📥 ArtistsScreen: Načítám kategorie...');
+        const categoriesData = await getArtistCategories();
+        console.log('📊 ArtistsScreen: Načteno kategorií:', categoriesData.length);
+        setCategories([{ label: 'Všichni', value: 'all' }, ...categoriesData]);
 
-        if (shouldFetch) {
-          console.log('📥 Fetching updated artists data...');
-          const response = await fetch('https://www.fmcityfest.cz/api/mobile-app/artists.php');
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Server responded with an error:', errorText);
-            throw new Error('Failed to fetch artists data');
-          }
-          const data = await response.json();
-
-          setInterpreti(data.records);
-          await saveToCache('cachedArtists', data.records);
-          await setLastUpdate('artists', latestArtistsUpdate);
-          console.log('💾 Artists cache saved.');
-
-          if (data.categories) {
-            const newCats = data.categories.map(cat => ({
-              label: cat.name,
-              value: cat.tag,
-            }));
-            setCategories([{ label: 'Všichni', value: 'all' }, ...newCats]);
-            await saveToCache('cachedArtistCategories', newCats);
-            console.log('💾 Categories cache saved.');
-          }
-        } else {
-          console.log('✅ Using cached artists data');
-
-          const cachedArtists = await loadFromCache('cachedArtists');
-          const cachedCategories = await loadFromCache('cachedArtistCategories');
-
-          console.log('📦 Cached artists:', cachedArtists ? 'Found' : 'NOT found');
-          console.log('📦 Cached categories:', cachedCategories ? 'Found' : 'NOT found');
-
-          if (cachedArtists) setInterpreti(cachedArtists);
-          if (cachedCategories) setCategories([{ label: 'Všichni', value: 'all' }, ...cachedCategories]);
-        }
-      } catch (error) {
-        console.error('❌ Error fetching artists:', error);
+        console.log('✅ ArtistsScreen: Data byla úspěšně načtena');
+      } catch (err) {
+        console.error('❌ ArtistsScreen: Chyba při načítání dat:', err);
+        setError(err.message);
       } finally {
         setLoading(false);
       }
     };
 
     if (config?.last_updates?.artists) {
-      fetchInterpretiIfNeeded();
+      loadData();
+    } else {
+      console.warn('⚠️ config.last_updates.artists není dostupný, načítání se neprovádí.');
     }
   }, [config]);
 
-  const filteredInterpreti = selectedCategory === 'all'
-    ? interpreti
-    : interpreti.filter(item => item.fields.category_tag === selectedCategory);
+  const filteredArtists = Array.isArray(artists)
+    ? selectedCategory === 'all'
+      ? artists
+      : artists.filter(item => item?.fields?.category_tag === selectedCategory)
+    : [];
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      style={styles.card}
-      onPress={() => navigation.navigate('ArtistDetail', { id: item.id })}
-    >
-      <Image
-        source={{ uri: item.fields.photo?.url }}
-        style={styles.image}
-        resizeMode="cover"        // místo contentFit
-        //defaultSource={require('../assets/placeholder.png')} // (volitelné) placeholder
-      />
-      <View style={styles.overlay}>
-        <Text style={styles.name}>{item.fields.name}</Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const renderItem = ({ item }) => {
+    if (!item || !item.fields) {
+      console.warn('⚠️ Invalid artist item:', item);
+      return null;
+    }
 
+    return (
+      <TouchableOpacity
+        style={styles.card}
+        onPress={() => navigation.navigate('ArtistDetail', { artist: item })}
+      >
+        <Image
+          source={{ uri: item.fields.photo?.url }}
+          style={styles.image}
+          resizeMode="cover"
+        />
+        <View style={styles.overlay}>
+          <Text style={styles.name}>{item.fields.name}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   const renderHeader = () => (
     <>
@@ -112,9 +91,9 @@ export default function InterpretiScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filters}
         >
-          {categories.map((cat) => (
+          {categories.map((cat, index) => (
             <TouchableOpacity
-              key={cat.value}
+              key={`${cat.value}-${index}`}
               style={[
                 styles.filterButton,
                 selectedCategory === cat.value && styles.activeFilter,
@@ -145,27 +124,30 @@ export default function InterpretiScreen() {
   }
 
   return (
-    <View style={styles.background}>
-      <FlatList
-        data={
-          filteredInterpreti.length % 2 === 1
-            ? [...filteredInterpreti, { id: 'spacer' }]
-            : filteredInterpreti
-        }
-        keyExtractor={(item, index) => item.id?.toString() || index.toString()}
-        numColumns={2}
-        columnWrapperStyle={styles.row}
-        renderItem={({ item }) =>
-          item.id === 'spacer' ? (
-            <View style={[styles.card, { backgroundColor: 'transparent' }]} />
-          ) : (
-            renderItem({ item })
-          )
-        }
-        ListHeaderComponent={renderHeader}
-        contentContainerStyle={styles.list}
-      />
-    </View>
+    <>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <View style={styles.background}>
+        <FlatList
+          data={
+            filteredArtists.length % 2 === 1
+              ? [...filteredArtists, { id: 'spacer' }]
+              : filteredArtists
+          }
+          keyExtractor={(item, index) => item.id?.toString() || index.toString()}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
+          renderItem={({ item }) =>
+            item?.id === 'spacer' ? (
+              <View style={[styles.card, { backgroundColor: 'transparent' }]} />
+            ) : (
+              renderItem({ item })
+            )
+          }
+          ListHeaderComponent={renderHeader}
+          contentContainerStyle={styles.list}
+        />
+      </View>
+    </>
   );
 }
 

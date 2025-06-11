@@ -1,141 +1,200 @@
-import { View, Text, ImageBackground, TouchableOpacity, Linking, Image, ActivityIndicator, StyleSheet } from 'react-native';
-import { useState } from 'react';
-import Modal from 'react-native-modal';
-import { WebView } from 'react-native-webview';
+import React, { useEffect, useState } from 'react';
+import { View, Text, TouchableOpacity, Image, StyleSheet, StatusBar, ImageBackground, ScrollView, ActivityIndicator, Linking } from 'react-native';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { useRemoteConfig } from '../context/RemoteConfigProvider';
+import { getPartners } from '../utils/dataLoader';
 
 export default function HomeScreen({ navigation }) {
   const backgroundImage = require('../assets/background-hp.png');
   const logoImage = require('../assets/logo.png');
+  const [partners, setPartners] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [isModalVisible, setModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  useEffect(() => {
+    const loadPartners = async () => {
+      try {
+        const data = await getPartners();
+        // Filtrujeme pouze Generální partnery
+        const generalPartners = data.filter(p => p.category === 'Generální partneři');
+        setPartners(generalPartners);
+        setError(null);
+      } catch (error) {
+        console.error('Chyba při načítání partnerů:', error);
+        setError('Nepodařilo se načíst partnery');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadPartners();
+  }, []);
 
-  const { config, loading } = useRemoteConfig();
+  const mainPartners = partners;
 
-  if (loading || !config) {
-    return <ActivityIndicator size="large" color="#21AAB0" style={{ flex: 1, justifyContent: 'center' }} />;
-  }
-
-  const videoId = config.after_movie_video_id;
-  const buttons = config.home_buttons || [];
-
-  const handleButtonPress = (btn) => {
-    if (btn.action === 'screen') {
-      navigation.navigate(btn.target, btn.params || {});
-    } else if (btn.action === 'url') {
-      Linking.openURL(btn.target);
-    }
-  };
+  const tiles = [
+    { label: 'Program', icon: 'calendar', onPress: () => navigation.navigate('Program') },
+    { label: 'Mapa', icon: 'map', onPress: () => navigation.navigate('Map') },
+    { label: 'Časté dotazy', icon: 'help-circle', onPress: () => navigation.navigate('FAQ') },
+    { label: 'Novinky', icon: 'newspaper', onPress: () => navigation.navigate('News') },
+  ];
 
   return (
-    <ImageBackground source={backgroundImage} style={{ flex: 1 }}>
-      <View style={{ flex: 1, padding: 20, justifyContent: 'space-between' }}>
+    <>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <ImageBackground source={backgroundImage} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }}>
+          <View style={{ flex: 1, padding: 20, justifyContent: 'flex-start' }}>
+            {/* Logo a nadpis */}
+            <View style={{ alignItems: 'center', marginTop: 40 }}>
+              <Image source={logoImage} style={{ width: 180, resizeMode: 'contain' }} />
+              <Text style={{ color: 'white', marginTop: 10, fontSize: 18 }}>7. ročník</Text>
+            </View>
 
-        {/* Horní část */}
-        <View style={{ alignItems: 'center', marginTop: 40 }}>
-          <Image source={logoImage} style={{ width: 180, height: 60, resizeMode: 'contain' }} />
-          <Text style={{ color: 'white', marginTop: 10, fontSize: 18 }}>7. ročník</Text>
-        </View>
+            {/* Grid 2x2 */}
+            <View style={styles.grid}>
+              {tiles.map((tile, idx) => (
+                <TouchableOpacity
+                  key={tile.label}
+                  style={styles.tile}
+                  onPress={tile.onPress}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons name={tile.icon} size={36} color="#21AAB0" style={{ marginBottom: 10 }} />
+                  <Text style={styles.tileText}>{tile.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-        {/* Střed */}
-        <View style={{ alignItems: 'center' }}>
-          <Text style={{ color: 'white', fontSize: 32, fontWeight: 'bold', textAlign: 'center' }}>
-            27.–28. 6. 2025
-          </Text>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
-            <Ionicons name="location-outline" size={18} color="#21AAB0" />
-            <Text style={{ color: 'white', marginLeft: 5, textAlign: 'center' }}>
-              Lembergerova textilní továrna, Frýdek-Místek
-            </Text>
-          </View>
-
-          <View style={{ marginTop: 30, alignItems: 'center' }}>
-            <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 18, textAlign: 'center' }}>
-              KABÁT · RUDIM3NTAL
-            </Text>
-            <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16, textAlign: 'center', marginTop: 10 }}>
-              X AMBASSADORS · BAKERMAT · CHINASKI
-            </Text>
-            <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16, textAlign: 'center', marginTop: 5 }}>
-              MIRAI · EWA FARNA · WANASTOWI VJECY
-            </Text>
-          </View>
-        </View>
-
-        {/* Dynamická tlačítka */}
-        <View style={{ gap: 10, marginTop: 40 }}>
-          {buttons.map((button, idx) => (
-            <TouchableOpacity
-              key={idx}
-              onPress={() => handleButtonPress(button)}
-              style={{
-                backgroundColor: '#21AAB0',
-                paddingVertical: 20,
-                paddingHorizontal: 20,
-                borderRadius: 10,
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <Ionicons name={button.icon || 'ellipse'} size={24} color="white" />
-                <View style={{ marginLeft: 12 }}>
-                  <Text style={{ color: 'white', fontSize: 16, fontWeight: 'bold' }}>{button.label}</Text>
-                  {button.subtext && (
-                    <Text style={{ color: 'white', fontSize: 12 }}>{button.subtext}</Text>
-                  )}
+            {/* Sekce Partneři */}
+            <View style={{ marginTop: 0 }}>
+              <Text style={styles.partnersTitle}>Generální partneři</Text>
+              {loading ? (
+                <ActivityIndicator color="#21AAB0" style={{ marginVertical: 20 }} />
+              ) : error ? (
+                <Text style={styles.errorText}>{error}</Text>
+              ) : mainPartners.length === 0 ? (
+                <Text style={styles.errorText}>Nebyli nalezeni žádní partneři</Text>
+              ) : (
+                <View style={styles.partnersGrid}>
+                  {mainPartners.map((partner) => (
+                    <TouchableOpacity 
+                      key={partner.id} 
+                      style={styles.partnerBox}
+                      onPress={() => partner.website_url && Linking.openURL(partner.website_url)}
+                      activeOpacity={0.7}
+                    >
+                      {partner.logo_url ? (
+                        <Image
+                          source={{ uri: partner.logo_url }}
+                          style={styles.partnerLogo}
+                          resizeMode="contain"
+                          onError={(e) => console.error('Chyba při načítání loga:', partner.name, e.nativeEvent.error)}
+                        />
+                      ) : (
+                        <View style={styles.placeholderContainer}>
+                          <Text style={styles.placeholderText}>{partner.name}</Text>
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  ))}
                 </View>
-              </View>
-              <Ionicons name="arrow-forward-outline" size={20} color="white" />
-            </TouchableOpacity>
-          ))}
-        </View>
-
-        {/* Spodní část */}
-        <View style={{ alignItems: 'center', marginBottom: 20 }}>
-          <TouchableOpacity
-            style={{ flexDirection: 'row', alignItems: 'center', marginTop: 20 }}
-            onPress={() => {
-              setModalVisible(true);
-              setIsLoading(true);
-            }}
-          >
-            <Ionicons name="play-circle-outline" size={24} color="white" />
-            <Text style={{ color: 'white', marginLeft: 8, fontSize: 16 }}>Aftermovie 2024</Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* MODÁL */}
-        <Modal 
-          isVisible={isModalVisible} 
-          onBackdropPress={() => setModalVisible(false)} 
-          style={{ margin: 0, justifyContent: 'center', alignItems: 'center' }}
-        >
-          <View style={{ width: '90%', aspectRatio: 16/9, backgroundColor: 'black', borderRadius: 8, overflow: 'hidden' }}>
-            <WebView
-              source={{ uri: `https://www.youtube.com/embed/${videoId}?autoplay=1` }}
-              allowsFullscreenVideo
-              javaScriptEnabled
-              onLoadEnd={() => setIsLoading(false)}
-            />
-            {isLoading && (
-              <View style={{ ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center', backgroundColor: 'black' }}>
-                <ActivityIndicator size="large" color="#21AAB0" />
-              </View>
-            )}
-            <TouchableOpacity
-              style={{ position: 'absolute', top: 10, right: 10, zIndex: 1 }}
-              onPress={() => setModalVisible(false)}
-            >
-              <Ionicons name="close-circle" size={32} color="white" />
-            </TouchableOpacity>
+              )}
+              <TouchableOpacity
+                style={styles.showAllBtn}
+                onPress={() => navigation.navigate('Partners')}
+              >
+                <Text style={styles.showAllBtnText}>Zobrazit všechny partnery</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        </Modal>
-      </View>
-    </ImageBackground>
+        </ScrollView>
+      </ImageBackground>
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    marginTop: 40,
+    marginBottom: 0,
+  },
+  
+  tile: {
+    width: '48%',
+    height: 130, // fixní výška místo aspectRatio
+    backgroundColor: '#0A3652',
+    borderRadius: 0,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 15,
+    elevation: 2,
+  },
+  
+  tileText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+    marginTop: 4,
+  },
+  partnersTitle: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 18,
+    marginBottom: 16,
+    marginLeft: 2,
+    textAlign: 'center',
+  },
+  partnersGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginHorizontal: 0,
+  },
+  partnerBox: {
+    width: '50%',
+    aspectRatio: 2.8,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#224259',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 0,
+  },
+  partnerLogo: {
+    width: '90%',
+    height: '90%',
+  },
+  showAllBtn: {
+    backgroundColor: '#21AAB0',
+    paddingVertical: 10,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  showAllBtnText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 15,
+  },
+  errorText: {
+    color: 'white',
+    textAlign: 'center',
+    marginVertical: 20,
+    fontSize: 16,
+  },
+  placeholderContainer: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#0A3652',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 10,
+  },
+  placeholderText: {
+    color: '#21AAB0',
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+});

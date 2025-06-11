@@ -1,5 +1,6 @@
 // context/RemoteConfigProvider.js
 import React, { createContext, useContext, useEffect, useState } from 'react';
+import axios from 'axios';
 import {
   loadFromCache,
   saveToCache,
@@ -8,48 +9,66 @@ import {
 } from '../utils/cache';
 
 const RemoteConfigContext = createContext();
-
 export const useRemoteConfig = () => useContext(RemoteConfigContext);
 
 export const RemoteConfigProvider = ({ children }) => {
   const [config, setConfig] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const CONFIG_URL = 'https://www.fmcityfest.cz/api/mobile-app/mobile-remote-config.json';
+  const CONFIG_URL = 'https://www.fmcityfest.cz/api/mobile-app/mobile-remote-config.php';
   const CACHE_KEY = 'mobileRemoteConfig';
   const LAST_UPDATE_KEY = 'mobileRemoteConfig';
+
+  const fallbackConfig = {
+    home_buttons: [],
+    after_movie_video_id: '',
+  };
 
   useEffect(() => {
     const loadRemoteConfig = async () => {
       try {
-        const response = await fetch(CONFIG_URL + '?_=' + Date.now());
-        const data = await response.json();
+        //console.log("🌐 Fetching from", CONFIG_URL);
 
+        const response = await axios.get(CONFIG_URL, {
+          params: { _: Date.now() },
+          timeout: 10000, // 10s timeout pro jistotu
+          validateStatus: () => true, // vrací všechny odpovědi, i chybové
+        });
+
+        //console.log('📶 Axios status:', response.status);
+        //console.log('🧪 Axios data:', JSON.stringify(response.data).slice(0, 300));
+
+        const data = response.data;
         const remoteUpdatedAt = data.updated_at;
         const localUpdatedAt = await getLastUpdate(LAST_UPDATE_KEY);
 
-        //const shouldFetch = !localUpdatedAt || new Date(remoteUpdatedAt) > new Date(localUpdatedAt);
-        const shouldFetch = true;
+        const shouldFetch = true; // můžeš změnit dle aktualizační logiky
 
-        if (shouldFetch) {
+        if (shouldFetch && data) {
           setConfig(data);
           await saveToCache(CACHE_KEY, data);
           await setLastUpdate(LAST_UPDATE_KEY, remoteUpdatedAt);
-          console.log('✅ Remote config updated from server');
-        } else {
-          const cached = await loadFromCache(CACHE_KEY);
-          if (cached) {
-            setConfig(cached);
-            console.log('✅ Remote config loaded from cache');
-          } else {
-            setConfig(data); // fallback na data i když nejsou cache
-          }
+          //console.log('✅ Remote config updated from server');
         }
-      } catch (e) {
-        console.warn('⚠️ Failed to fetch config, using cache if available');
+      } catch (error) {
+        console.warn('⚠️ Axios fetch failed:', error?.message || error);
+        console.warn('🧨 Axios full error:', error.toJSON());
+        if (error.response) {
+          console.warn('📛 Server responded with status:', error.response.status);
+          console.warn('📥 Response data:', JSON.stringify(error.response.data));
+        } else if (error.request) {
+          console.warn('📡 No response received:', error.request);
+        } else {
+          console.warn('💥 Unexpected error:', error.message);
+        }
+
         const cached = await loadFromCache(CACHE_KEY);
         if (cached) {
+          //console.log('📦 Using cached config');
           setConfig(cached);
+        } else {
+          console.warn('⚠️ No cache found, using fallback');
+          setConfig(fallbackConfig);
         }
       } finally {
         setLoading(false);

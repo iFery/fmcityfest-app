@@ -6,7 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 export const saveToCache = async (key, data) => {
   try {
     await AsyncStorage.setItem(key, JSON.stringify(data));
-    console.log(`💾 Data saved to cache [${key}]`);
+    //console.log(`💾 Data saved to cache [${key}]`);
   } catch (e) {
     console.error(`❌ Failed to save to cache [${key}]`, e);
   }
@@ -43,7 +43,7 @@ export const getLastUpdate = async (key) => {
 export const setLastUpdate = async (key, timestamp) => {
   try {
     await AsyncStorage.setItem(`lastUpdate_${key}`, timestamp);
-    console.log(`🕒 Last update saved [${key}] => ${timestamp}`);
+    //console.log(`🕒 Last update saved [${key}] => ${timestamp}`);
   } catch (e) {
     console.error(`❌ Failed to save last update [${key}]`, e);
   }
@@ -52,7 +52,7 @@ export const setLastUpdate = async (key, timestamp) => {
 export const removeFromCache = async (key) => {
   try {
     await AsyncStorage.removeItem(key);
-    console.log(`🗑️ Removed ${key} from cache`);
+    //console.log(`🗑️ Removed ${key} from cache`);
   } catch (error) {
     console.error(`❌ Error removing ${key} from cache:`, error);
   }
