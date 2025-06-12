@@ -10,13 +10,21 @@ export default function Header({ title }) {
     >
       <View style={styles.headerContent}>
         <View style={styles.titleWrapper}>
-          <Text style={styles.headerTitle}>{title}</Text>
+          <Text
+            style={[
+              styles.headerTitle,
+              title?.length > 22 && { fontSize: 22 }
+            ]}
+          >
+            {title}
+          </Text>
           <View style={styles.splitline} />
         </View>
       </View>
     </ImageBackground>
   );
 }
+
 
 const styles = StyleSheet.create({
   headerBackground: {

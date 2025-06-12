@@ -3,6 +3,7 @@ import { View, Text, Image, TouchableOpacity, ScrollView, ActivityIndicator, Sta
 import Header from '../components/Header';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
+import { getFAQ } from '../utils/dataLoader';
 
 const iconMap = {
   'stage.png': require('../assets/icons/stage.png'),
@@ -22,8 +23,7 @@ export default function FAQScreen() {
   useEffect(() => {
     const fetchFaq = async () => {
       try {
-        const response = await fetch('https://www.fmcityfest.cz/api/mobile-app/faq.php');
-        const data = await response.json();
+        const data = await getFAQ();
         setFaqData(data);
       } catch (error) {
         console.error('❌ Error fetching FAQ:', error);

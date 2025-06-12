@@ -9,9 +9,11 @@ import Ionicons from 'react-native-vector-icons/Ionicons';
 import { RemoteConfigProvider } from './context/RemoteConfigProvider';
 import { loadFromCache } from './utils/cache';
 import { loadFestivalData } from './utils/dataLoader';
-import notifee from '@notifee/react-native';
+import notifee, { AuthorizationStatus } from '@notifee/react-native';
 import { enableNotifications, areNotificationsEnabled } from './utils/notificationHelper';
 import { SafeAreaProvider, useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
+import messaging from '@react-native-firebase/messaging';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import HomeScreen from './screens/HomeScreen';
 import ArtistsScreen from './screens/ArtistsScreen';
@@ -152,6 +154,28 @@ function TabNavigator() {
   );
 }
 
+async function requestNotificationPermissionOnce() {
+  const alreadyAsked = await AsyncStorage.getItem('notification_permission_asked');
+  console.log('Kontrola notifikačního permission, alreadyAsked:', alreadyAsked);
+  if (!alreadyAsked) {
+    try {
+      console.log('Žádám o notifikační permission přes notifee...');
+      const settings = await notifee.requestPermission();
+      console.log('Notifee permission status:', settings.authorizationStatus);
+      await AsyncStorage.setItem('notification_permission_asked', 'true');
+      if (settings.authorizationStatus >= AuthorizationStatus.AUTHORIZED) {
+        console.log('Notifikace povoleny!');
+      } else {
+        console.log('Notifikace nejsou povoleny.');
+      }
+    } catch (e) {
+      console.log('Chyba při žádosti o notifikační permission:', e);
+    }
+  } else {
+    console.log('Permission už bylo žádáno dříve.');
+  }
+}
+
 async function setupNotificationChannel() {
   try {
     await notifee.createChannel({
@@ -179,9 +203,34 @@ export default function App() {
   useEffect(() => {
     const initializeApp = async () => {
       try {
+        // Získání instance messaging
+        const messagingInstance = messaging();
+
+        // Požádáme o povolení notifikací
+        await requestNotificationPermissionOnce();
+
+        // Nastavíme listener pro foreground zprávy
+        const unsubscribe = messagingInstance.onMessage(async remoteMessage => {
+          console.log('Přijata zpráva v popředí:', remoteMessage);
+
+          // Zobrazíme notifikaci pomocí notifee
+          await notifee.displayNotification({
+            title: remoteMessage.notification?.title,
+            body: remoteMessage.notification?.body,
+            android: {
+              channelId: 'default',
+              pressAction: { id: 'default' },
+            },
+          });
+        });
+
+        // Přihlášení k topicu
+        await messagingInstance.subscribeToTopic('all');
+        console.log('Přihlášen k odběru topicu "all"');
+
         console.log('🚀 Kontroluji cache a případně stahuji festivalová data...');
         const data = await loadFestivalData();
-        
+
         if (!data || !data.artists || !data.program) {
           throw new Error('Nepodařilo se načíst festivalová data');
         }
@@ -199,16 +248,21 @@ export default function App() {
         if (!notificationsEnabled) {
           console.log('ℹ️ Notifikace nejsou povoleny');
         }
-      } catch (err) {
-        console.error('❌ Chyba při inicializaci aplikace:', err);
-        setError(err.message);
-      } finally {
+
+        setIsLoading(false);
+
+        // Cleanup listeneru při unmount
+        return () => unsubscribe();
+      } catch (error) {
+        console.error('❌ Chyba při inicializaci aplikace:', error);
+        setError(error.message);
         setIsLoading(false);
       }
     };
 
     initializeApp();
   }, []);
+  
 
   if (isLoading) {
     return (

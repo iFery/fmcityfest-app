@@ -151,8 +151,24 @@ export async function loadFestivalData(config) {
     const festivalData = {
       artists: artistsData.records || artistsData,
       program: programData,
+      categories: artistsData.categories || [],
       last_update: config?.last_updates?.artists || new Date().toISOString()
     };
+
+    // Načtení FAQ
+    console.log('📥 Načítám FAQ z API...');
+    try {
+      const faqRes = await fetch(FAQ_URL);
+      if (!faqRes.ok) {
+        throw new Error(`Chyba při načítání FAQ: ${faqRes.status}`);
+      }
+      const faqData = await faqRes.json();
+      festivalData.faq = faqData;
+      console.log('✅ FAQ úspěšně načteny z API');
+    } catch (error) {
+      console.error('❌ Chyba při načítání FAQ:', error);
+      // Pokračujeme i když se nepodaří načíst FAQ
+    }
 
     // Validace sestavených dat
     if (!festivalData.artists || !festivalData.program) {
@@ -229,21 +245,21 @@ export const clearCache = async () => {
 export async function getAllArtists(config) {
   try {
     console.log('🔄 getAllArtists: Načítám data z cache...');
-    const cached = await loadFromCache(CACHE_KEYS.ARTISTS);
-    console.log('📦 getAllArtists: Cache data:', cached ? 'existují' : 'neexistují');
+    const festivalData = await loadFromCache(CACHE_KEYS.FESTIVAL_DATA);
+    console.log('📦 getAllArtists: Cache data:', festivalData ? 'existují' : 'neexistují');
     
     // Kontrola, zda máme validní data v cache
-    if (cached && Array.isArray(cached) && cached.length > 0) {
+    if (festivalData?.artists && Array.isArray(festivalData.artists) && festivalData.artists.length > 0) {
       console.log('✅ getAllArtists: Data byla úspěšně načtena z cache');
-      console.log('📊 getAllArtists: Počet interpretů v cache:', cached.length);
+      console.log('📊 getAllArtists: Počet interpretů v cache:', festivalData.artists.length);
       
       // Debug: vypíšeme strukturu prvního interpreta
-      if (cached.length > 0) {
-        console.log('🔍 getAllArtists: Ukázka struktury interpreta:', JSON.stringify(cached[0], null, 2));
+      if (festivalData.artists.length > 0) {
+        console.log('🔍 getAllArtists: Ukázka struktury interpreta:', JSON.stringify(festivalData.artists[0], null, 2));
       }
       
       // Filtrujeme pouze interprety s show_on_website = 1
-      const filteredArtists = cached.filter(artist => {
+      const filteredArtists = festivalData.artists.filter(artist => {
         const showOnWebsite = artist.show_on_website;
         console.log('🔍 getAllArtists: show_on_website hodnota:', showOnWebsite, 'typ:', typeof showOnWebsite);
         return showOnWebsite === 1 || showOnWebsite === '1' || showOnWebsite === true;
@@ -275,8 +291,13 @@ export async function getAllArtists(config) {
       console.log('🔍 getAllArtists: Ukázka struktury interpreta z API:', JSON.stringify(artists[0], null, 2));
     }
     
-    // Uložení do cache
-    await saveToCache(CACHE_KEYS.ARTISTS, artists);
+    // Uložení do festivalových dat
+    if (festivalData) {
+      festivalData.artists = artists;
+      await saveToCache(CACHE_KEYS.FESTIVAL_DATA, festivalData);
+    } else {
+      await saveToCache(CACHE_KEYS.FESTIVAL_DATA, { artists });
+    }
     console.log('✅ getAllArtists: Data byla úspěšně uložena do cache');
     
     // Filtrujeme pouze interprety s show_on_website = 1
@@ -296,12 +317,12 @@ export async function getAllArtists(config) {
 // ✅ Vrací všechny interprety včetně těch skrytých (pro program a detail)
 export async function getAllArtistsIncludingHidden() {
   try {
-    const cached = await loadFromCache(CACHE_KEYS.ARTISTS);
-    if (!cached || !Array.isArray(cached)) {
+    const festivalData = await loadFromCache(CACHE_KEYS.FESTIVAL_DATA);
+    if (!festivalData || !festivalData.artists || !Array.isArray(festivalData.artists)) {
       console.warn('⚠️ getAllArtistsIncludingHidden: Data v cache nejsou validní');
       return [];
     }
-    return cached;
+    return festivalData.artists;
   } catch (error) {
     console.error('❌ getAllArtistsIncludingHidden: Chyba při načítání dat:', error);
     return [];
@@ -311,32 +332,31 @@ export async function getAllArtistsIncludingHidden() {
 // ✅ Vrací kategorie interpretů z cache
 export async function getArtistCategories() {
   try {
-    const data = await AsyncStorage.getItem(CACHE_KEYS.artistCategories);
-    if (!data) {
-      console.log('ℹ️ getArtistCategories: Kategorie nejsou v cache, načítám z API...');
-      const res = await fetch(ARTISTS_URL);
-      const json = await res.json();
-      if (json.categories && Array.isArray(json.categories)) {
-        await saveToCache(CACHE_KEYS.artistCategories, json.categories);
-        return json.categories.map(cat => ({
-          label: cat.name || 'Neznámá',
-          value: cat.tag || 'unknown',
-        }));
+    // Nejprve zkusíme načíst z festivalových dat v cache
+    const festivalData = await loadFromCache(CACHE_KEYS.FESTIVAL_DATA);
+    if (festivalData?.categories && Array.isArray(festivalData.categories)) {
+      return festivalData.categories.map(cat => ({
+        label: cat.name || 'Neznámá',
+        value: cat.tag || 'unknown',
+      }));
+    }
+
+    // Pokud nemáme kategorie v festivalových datech, zkusíme je načíst z API
+    console.log('ℹ️ getArtistCategories: Kategorie nejsou v cache, načítám z API...');
+    const res = await fetch(ARTISTS_URL);
+    const json = await res.json();
+    if (json.categories && Array.isArray(json.categories)) {
+      // Uložíme kategorie do festivalových dat
+      if (festivalData) {
+        festivalData.categories = json.categories;
+        await saveToCache(CACHE_KEYS.FESTIVAL_DATA, festivalData);
       }
-      return [];
+      return json.categories.map(cat => ({
+        label: cat.name || 'Neznámá',
+        value: cat.tag || 'unknown',
+      }));
     }
-
-    const parsed = JSON.parse(data);
-    if (!Array.isArray(parsed)) {
-      console.warn('⚠️ getArtistCategories: Kategorie v cache nejsou pole:', parsed);
-      return [];
-    }
-
-    // ✅ PŘEMAPOVÁNÍ na label/value, které používáš ve výpisu
-    return parsed.map(cat => ({
-      label: cat.name || 'Neznámá',
-      value: cat.tag || 'unknown',
-    }));
+    return [];
   } catch (err) {
     console.error('❌ getArtistCategories: Nelze načíst kategorie:', err);
     return [];
@@ -348,16 +368,16 @@ export async function getArtistById(id) {
     console.log('🔍 getArtistById: Hledám interpreta s ID:', id);
     
     // Načtení dat z cache
-    const cached = await loadFromCache(CACHE_KEYS.ARTISTS);
-    console.log('📦 getArtistById: Data z cache:', cached ? 'existují' : 'neexistují');
+    const festivalData = await loadFromCache(CACHE_KEYS.FESTIVAL_DATA);
+    console.log('📦 getArtistById: Data z cache:', festivalData ? 'existují' : 'neexistují');
     
-    if (!cached || !Array.isArray(cached)) {
+    if (!festivalData || !festivalData.artists || !Array.isArray(festivalData.artists)) {
       console.warn('⚠️ getArtistById: Data v cache nejsou validní');
       return null;
     }
 
     // Hledání interpreta
-    const found = cached.find(a => String(a.id) === String(id));
+    const found = festivalData.artists.find(a => String(a.id) === String(id));
     console.log('🔎 getArtistById: Nalezený interpret:', found ? 'existuje' : 'neexistuje');
 
     if (found) {
@@ -502,12 +522,17 @@ export async function getNews() {
 export async function getNewsDetail(newsId) {
   try {
     // Zkusíme načíst z cache
-    const cached = await loadFromCache(`${CACHE_KEYS_EXT.NEWS_DETAIL}_${newsId}`);
-    if (cached && cached.item && Date.now() - cached.timestamp < CACHE_DURATION) {
-      return cached.item;
+    const cached = await loadFromCache(CACHE_KEYS_EXT.NEWS);
+    if (cached && Array.isArray(cached.items)) {
+      const newsDetail = cached.items.find(item => item.id === newsId);
+      if (newsDetail) {
+        console.log('📦 Načítám detail novinky z cache');
+        return newsDetail;
+      }
     }
 
-    // Načteme z API
+    // Pokud nemáme v cache, načteme z API
+    console.log('🌐 Načítám detail novinky z API');
     const response = await fetch('https://www.fmcityfest.cz/api/mobile-app/news.php');
     if (!response.ok) {
       throw new Error('Nepodařilo se načíst detail novinky');
@@ -520,13 +545,10 @@ export async function getNewsDetail(newsId) {
     }
 
     // Uložíme do cache
-    await saveToCache(`${CACHE_KEYS_EXT.NEWS_DETAIL}_${newsId}`, { item: newsDetail, timestamp: Date.now() });
+    await saveToCache(CACHE_KEYS_EXT.NEWS, { items: data, timestamp: Date.now() });
     return newsDetail;
   } catch (error) {
     console.error('Chyba při načítání detailu novinky:', error);
-    // Pokud selže API, zkusíme vrátit z cache i po expiraci
-    const cached = await loadFromCache(`${CACHE_KEYS_EXT.NEWS_DETAIL}_${newsId}`);
-    if (cached && cached.item) return cached.item;
     throw error;
   }
 }
@@ -551,5 +573,43 @@ export async function getPartners() {
     const cached = await loadFromCache(CACHE_KEYS_EXT.PARTNERS);
     if (cached && Array.isArray(cached.items)) return cached.items;
     throw e;
+  }
+}
+
+export async function getFAQ() {
+  try {
+    // Zkusíme načíst z cache
+    const festivalData = await loadFromCache(CACHE_KEYS.FESTIVAL_DATA);
+    if (festivalData?.faq && Array.isArray(festivalData.faq)) {
+      console.log('✅ getFAQ: Data byla úspěšně načtena z cache');
+      return festivalData.faq;
+    }
+
+    // Pokud nemáme data v cache, načteme je z API
+    console.log('ℹ️ getFAQ: Data nejsou v cache, načítám z API...');
+    const response = await fetch(FAQ_URL);
+    if (!response.ok) {
+      throw new Error('Nepodařilo se načíst FAQ');
+    }
+    const data = await response.json();
+    
+    // Uložíme do festivalových dat
+    if (festivalData) {
+      festivalData.faq = data;
+      await saveToCache(CACHE_KEYS.FESTIVAL_DATA, festivalData);
+    } else {
+      await saveToCache(CACHE_KEYS.FESTIVAL_DATA, { faq: data });
+    }
+    
+    console.log('✅ getFAQ: Data byla úspěšně uložena do cache');
+    return data;
+  } catch (error) {
+    console.error('❌ getFAQ: Chyba při načítání dat:', error);
+    // Pokud selže API, zkusíme vrátit z cache i po expiraci
+    const festivalData = await loadFromCache(CACHE_KEYS.FESTIVAL_DATA);
+    if (festivalData?.faq && Array.isArray(festivalData.faq)) {
+      return festivalData.faq;
+    }
+    throw error;
   }
 }

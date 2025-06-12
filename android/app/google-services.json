@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "669881751446",
+    "project_id": "fm-city-fest",
+    "storage_bucket": "fm-city-fest.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:669881751446:android:914d534ef4c32c32676fb7",
+        "android_client_info": {
+          "package_name": "com.fmcityfest.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDDNaFrS-oHBjVGoWF-h7Mjcldxm02ckmY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
