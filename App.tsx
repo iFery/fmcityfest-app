@@ -1,6 +1,6 @@
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Alert, Platform } from 'react-native';
+import { StyleSheet, Text, View, Alert, Platform, PermissionsAndroid } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 
 export default function App() {
@@ -8,7 +8,7 @@ export default function App() {
   const [notificationPermission, setNotificationPermission] = useState<string>('checking');
 
   useEffect(() => {
-    // Request notification permission and get FCM token (iOS)
+    // Request notification permission and get FCM token
     const setupPushNotifications = async () => {
       try {
         if (Platform.OS === 'ios') {
@@ -23,9 +23,32 @@ export default function App() {
             // Register for remote messages (required for iOS)
             await messaging().registerDeviceForRemoteMessages();
           }
+        } else if (Platform.OS === 'android') {
+          // Android 13+ (API 33+) requires runtime permission for POST_NOTIFICATIONS
+          if (Platform.Version >= 33) {
+            try {
+              const granted = await PermissionsAndroid.request(
+                PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+                {
+                  title: 'Notification Permission',
+                  message: 'We need permission to send you push notifications about important updates and events.',
+                  buttonNeutral: 'Ask Me Later',
+                  buttonNegative: 'Cancel',
+                  buttonPositive: 'OK',
+                }
+              );
+              setNotificationPermission(granted === PermissionsAndroid.RESULTS.GRANTED ? 'granted' : 'denied');
+            } catch (error) {
+              console.error('Error requesting notification permission:', error);
+              setNotificationPermission('error');
+            }
+          } else {
+            // Android 12 and below don't require runtime permission
+            setNotificationPermission('granted');
+          }
         }
 
-        // Get FCM token
+        // Get FCM token (works on both iOS and Android)
         const token = await messaging().getToken();
         if (token) {
           setFcmToken(token);
