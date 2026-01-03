@@ -61,6 +61,7 @@ cd ..
      "googleServicesFile": "./ios/GoogleService-Info.plist"
    }
    ```
+8. **For Push Notifications**: See [iOS Push Notifications Setup Guide](./docs/ios-push-notifications-setup.md) for APNs key configuration
 
 #### Android Configuration
 

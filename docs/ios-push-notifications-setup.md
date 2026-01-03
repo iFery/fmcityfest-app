@@ -38,17 +38,18 @@ Firebase will now be able to send push notifications to iOS devices through APNs
 
 ## Step 3: Configure Xcode Project Capabilities
 
-The Expo prebuild process should automatically configure the capabilities, but you can verify manually:
+After running `npx expo prebuild --platform ios` or `npm run ios`, you need to verify/add the required capabilities:
 
-1. Open `ios/fmcityfestapp.xcworkspace` in Xcode
-2. Select the project in the navigator
-3. Select the **fmcityfestapp** target
-4. Go to the **Signing & Capabilities** tab
-5. Verify the following capabilities are enabled:
-   - **Push Notifications** (should be listed)
-   - **Background Modes** (should be listed with "Remote notifications" checked)
+1. Run `npx expo prebuild --platform ios` to generate the iOS project (if not already done)
+2. Open `ios/fmcityfestapp.xcworkspace` in Xcode (note: use `.xcworkspace`, not `.xcodeproj`)
+3. Select the project in the navigator (top-level "fmcityfestapp" item)
+4. Select the **fmcityfestapp** target
+5. Go to the **Signing & Capabilities** tab
+6. Click the **+ Capability** button and add the following if not already present:
+   - **Push Notifications** - Add this capability
+   - **Background Modes** - Add this capability, then check the box for **Remote notifications**
 
-If these are not present, click the **+ Capability** button and add them.
+**Note**: React Native Firebase should configure these automatically, but you may need to add them manually if they're missing. These capabilities are required for push notifications to work properly.
 
 ## Step 4: Verify Info.plist
 
