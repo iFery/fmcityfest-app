@@ -1,11 +1,18 @@
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Alert, Platform, PermissionsAndroid } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
+import { Alert, Platform, PermissionsAndroid, AppState, AppStateStatus } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
+import { NavigationContainerRef } from '@react-navigation/native';
+import AppNavigator from './src/navigation/AppNavigator';
+import {
+  notificationDataToRoute,
+  extractNotificationData,
+} from './src/services/notificationNavigation';
+import { RootStackParamList } from './src/types/navigation';
 
 export default function App() {
-  const [fcmToken, setFcmToken] = useState<string | null>(null);
   const [notificationPermission, setNotificationPermission] = useState<string>('checking');
+  const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
+  const appState = useRef<AppStateStatus>(AppState.currentState);
 
   useEffect(() => {
     // Request notification permission and get FCM token
@@ -51,11 +58,10 @@ export default function App() {
           }
         }
 
-        // Get FCM token (works on both iOS and Android)
+        // Get FCM token
         const token = await messaging().getToken();
         if (token) {
-          setFcmToken(token);
-          console.log('FCM Token:', token);
+          console.log('[App] FCM Token:', token);
           if (__DEV__) {
             Alert.alert('FCM Token', `Token: ${token.substring(0, 50)}...`);
           }
@@ -67,72 +73,96 @@ export default function App() {
     };
 
     setupPushNotifications();
+
+    // Handle foreground messages
+    const unsubscribeForeground = messaging().onMessage(async remoteMessage => {
+      console.log('[App] Foreground message received:', remoteMessage);
+
+      // Show an alert or local notification when app is in foreground
+      // Note: System notification won't show in foreground by default
+      if (remoteMessage.notification) {
+        Alert.alert(
+          remoteMessage.notification.title || 'Notification',
+          remoteMessage.notification.body || 'You have a new message',
+          [
+            {
+              text: 'View',
+              onPress: () => {
+                handleNotificationNavigation(remoteMessage);
+              },
+            },
+            { text: 'OK', style: 'cancel' },
+          ]
+        );
+      } else {
+        // Data-only message - handle navigation immediately
+        handleNotificationNavigation(remoteMessage);
+      }
+    });
+
+    // Handle notification opened from background/quitted state
+    const unsubscribeBackground = messaging().onNotificationOpenedApp(remoteMessage => {
+      console.log('[App] Notification opened from background:', remoteMessage);
+      handleNotificationNavigation(remoteMessage);
+    });
+
+    // Check if app was opened from a quit state via notification
+    messaging()
+      .getInitialNotification()
+      .then(remoteMessage => {
+        if (remoteMessage) {
+          console.log('[App] App opened from quit state via notification:', remoteMessage);
+          // Small delay to ensure navigation is ready
+          setTimeout(() => {
+            handleNotificationNavigation(remoteMessage);
+          }, 1000);
+        }
+      });
+
+    // Listen for app state changes
+    const subscription = AppState.addEventListener('change', nextAppState => {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        // App has come to foreground - check for pending notifications if needed
+        console.log('[App] App came to foreground');
+      }
+      appState.current = nextAppState;
+    });
+
+    return () => {
+      unsubscribeForeground();
+      unsubscribeBackground();
+      subscription.remove();
+    };
   }, []);
 
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>FM City Fest App</Text>
-      <Text style={styles.subtitle}>Push Notifications Setup</Text>
-      <View style={styles.infoContainer}>
-        <Text style={styles.label}>Platform:</Text>
-        <Text style={styles.value}>{Platform.OS}</Text>
-        <Text style={styles.label}>Notification Permission:</Text>
-        <Text style={styles.value}>{notificationPermission}</Text>
-        {fcmToken && (
-          <>
-            <Text style={styles.label}>FCM Token:</Text>
-            <Text style={styles.tokenValue} numberOfLines={2}>
-              {fcmToken}
-            </Text>
-          </>
-        )}
-      </View>
-      <StatusBar style="auto" />
-    </View>
-  );
-}
+  /**
+   * Handles navigation based on notification data
+   */
+  const handleNotificationNavigation = (remoteMessage: any) => {
+    if (!navigationRef.current) {
+      console.warn('[App] Navigation ref not ready yet');
+      return;
+    }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 18,
-    color: '#666',
-    marginBottom: 32,
-  },
-  infoContainer: {
-    width: '100%',
-    maxWidth: 400,
-    backgroundColor: '#f5f5f5',
-    padding: 16,
-    borderRadius: 8,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 12,
-    marginBottom: 4,
-    color: '#333',
-  },
-  value: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  tokenValue: {
-    fontSize: 12,
-    color: '#666',
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
-    marginBottom: 8,
-  },
-});
+    const notificationData = extractNotificationData(remoteMessage);
+    const route = notificationDataToRoute(notificationData);
+
+    if (!route) {
+      console.warn('[App] Could not create route from notification data');
+      // Navigate to home as fallback
+      navigationRef.current.navigate('Home');
+      return;
+    }
+
+    try {
+      navigationRef.current.navigate(route.screen as any, route.params as any);
+      console.log('[App] Navigated to:', route.screen, route.params);
+    } catch (error) {
+      console.error('[App] Navigation error:', error);
+      // Fallback to home screen
+      navigationRef.current.navigate('Home');
+    }
+  };
+
+  return <AppNavigator ref={navigationRef} />;
+}

@@ -17,7 +17,12 @@
       "bundleIdentifier": "com.fmcityfest.app",
       "googleServicesFile": "./ios/GoogleService-Info.plist",
       "infoPlist": {
-        "NSUserNotificationsUsageDescription": "We need permission to send you push notifications about important updates and events."
+        "NSUserNotificationsUsageDescription": "We need permission to send you push notifications about important updates and events.",
+        "CFBundleURLTypes": [
+          {
+            "CFBundleURLSchemes": ["myapp"]
+          }
+        ]
       },
       "usesAppleSignIn": false
     },

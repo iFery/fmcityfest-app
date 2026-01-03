@@ -195,6 +195,8 @@ eas build --platform android
   - See [iOS Push Notifications Setup Guide](./docs/ios-push-notifications-setup.md) for detailed instructions
 - **Android Setup**: FCM configured with Android 13+ permission handling
   - See [Android Push Notifications Setup Guide](./docs/android-push-notifications-setup.md) for detailed instructions
+- **Navigation Handling**: Notifications automatically navigate to specific screens
+  - See [Push Notification Navigation Guide](./docs/push-notification-navigation.md) for payload schema and testing
 
 ### Remote Config
 
