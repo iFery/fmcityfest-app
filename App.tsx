@@ -10,7 +10,6 @@ import {
 import { RootStackParamList } from './src/types/navigation';
 
 export default function App() {
-  const [notificationPermission, setNotificationPermission] = useState<string>('checking');
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
   const appState = useRef<AppStateStatus>(AppState.currentState);
 
@@ -24,7 +23,7 @@ export default function App() {
             authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
             authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-          setNotificationPermission(enabled ? 'granted' : 'denied');
+          // Permission status handled
 
           if (enabled) {
             // Register for remote messages (required for iOS)
@@ -45,12 +44,9 @@ export default function App() {
                   buttonPositive: 'OK',
                 }
               );
-              setNotificationPermission(
-                granted === PermissionsAndroid.RESULTS.GRANTED ? 'granted' : 'denied'
-              );
+              // Permission status handled
             } catch (error) {
               console.error('Error requesting notification permission:', error);
-              setNotificationPermission('error');
             }
           } else {
             // Android 12 and below don't require runtime permission
@@ -68,7 +64,6 @@ export default function App() {
         }
       } catch (error) {
         console.error('Error setting up push notifications:', error);
-        setNotificationPermission('error');
       }
     };
 
