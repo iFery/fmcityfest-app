@@ -49,11 +49,14 @@ After adding or updating config files, you must rebuild:
 # Clean build
 npx expo prebuild --clean
 
-# Then rebuild
+# Then rebuild (full native rebuild required)
 npm run android  # or npm run ios
 ```
 
-**Important**: Simply restarting Metro bundler is not enough - you need a full native rebuild.
+**Important**: 
+- Simply restarting Metro bundler is NOT enough - you need a full native rebuild
+- The app must be completely rebuilt, not just refreshed
+- Close the app completely and rebuild from scratch if you're still seeing the error
 
 ### Step 4: Verify Package Name / Bundle ID
 
