@@ -44,7 +44,7 @@ cd ..
 
 ### 3. Firebase Setup
 
-This app requires Firebase configuration files. You need to:
+**Note**: Firebase configuration files are required for native builds (iOS/Android) and Firebase features. You can run the app in Expo Go without them, but native Firebase features (push notifications, etc.) will not work.
 
 #### iOS Configuration
 
@@ -55,6 +55,12 @@ This app requires Firebase configuration files. You need to:
    - Bundle ID: `com.fmcityfest.app`
 5. Download `GoogleService-Info.plist`
 6. Copy it to: `ios/GoogleService-Info.plist`
+7. After adding the file, update `app.json` to include:
+   ```json
+   "ios": {
+     "googleServicesFile": "./ios/GoogleService-Info.plist"
+   }
+   ```
 
 #### Android Configuration
 
@@ -62,8 +68,17 @@ This app requires Firebase configuration files. You need to:
    - Package name: `com.fmcityfest.app`
 2. Download `google-services.json`
 3. Copy it to: `android/app/google-services.json`
+4. After adding the file, update `app.json` to include:
+   ```json
+   "android": {
+     "googleServicesFile": "./android/app/google-services.json"
+   }
+   ```
 
-**Note**: Example files are provided as `.example` files. Replace them with your actual Firebase config files.
+**Note**: 
+- Example files (`.example`) are provided in `ios/` and `android/app/` directories for reference
+- These config files are git-ignored for security reasons
+- After adding the config files and updating `app.json`, run `npx expo prebuild --clean` to regenerate native code with Firebase integration
 
 ### 4. Run the App
 
