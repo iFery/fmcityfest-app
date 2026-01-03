@@ -1,4 +1,5 @@
-import { NavigationContainer } from '@react-navigation/native';
+import { forwardRef } from 'react';
+import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../types/navigation';
 import HomeScreen from '../screens/HomeScreen';
@@ -7,9 +8,10 @@ import NotificationTestScreen from '../screens/NotificationTestScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-export default function AppNavigator() {
+const AppNavigator = forwardRef<NavigationContainerRef<RootStackParamList>>((props, ref) => {
   return (
     <NavigationContainer
+      ref={ref}
       linking={{
         prefixes: ['myapp://'],
         config: {
@@ -37,4 +39,8 @@ export default function AppNavigator() {
       </Stack.Navigator>
     </NavigationContainer>
   );
-}
+});
+
+AppNavigator.displayName = 'AppNavigator';
+
+export default AppNavigator;

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { Alert, Platform, PermissionsAndroid, AppState, AppStateStatus } from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import { NavigationContainerRef } from '@react-navigation/native';
@@ -23,8 +23,6 @@ export default function App() {
             authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
             authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-          // Permission status handled
-
           if (enabled) {
             // Register for remote messages (required for iOS)
             await messaging().registerDeviceForRemoteMessages();
@@ -33,7 +31,7 @@ export default function App() {
           // Android 13+ (API 33+) requires runtime permission for POST_NOTIFICATIONS
           if (Platform.Version >= 33) {
             try {
-              const granted = await PermissionsAndroid.request(
+              await PermissionsAndroid.request(
                 PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
                 {
                   title: 'Notification Permission',
@@ -44,14 +42,11 @@ export default function App() {
                   buttonPositive: 'OK',
                 }
               );
-              // Permission status handled
             } catch (error) {
               console.error('Error requesting notification permission:', error);
             }
-          } else {
-            // Android 12 and below don't require runtime permission
-            setNotificationPermission('granted');
           }
+          // Android 12 and below don't require runtime permission
         }
 
         // Get FCM token
@@ -108,7 +103,7 @@ export default function App() {
         if (remoteMessage) {
           console.log('[App] App opened from quit state via notification:', remoteMessage);
           // Small delay to ensure navigation is ready
-          setTimeout(() => {
+          global.setTimeout(() => {
             handleNotificationNavigation(remoteMessage);
           }, 1000);
         }
