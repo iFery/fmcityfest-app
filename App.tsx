@@ -31,13 +31,16 @@ export default function App() {
                 PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
                 {
                   title: 'Notification Permission',
-                  message: 'We need permission to send you push notifications about important updates and events.',
+                  message:
+                    'We need permission to send you push notifications about important updates and events.',
                   buttonNeutral: 'Ask Me Later',
                   buttonNegative: 'Cancel',
                   buttonPositive: 'OK',
                 }
               );
-              setNotificationPermission(granted === PermissionsAndroid.RESULTS.GRANTED ? 'granted' : 'denied');
+              setNotificationPermission(
+                granted === PermissionsAndroid.RESULTS.GRANTED ? 'granted' : 'denied'
+              );
             } catch (error) {
               console.error('Error requesting notification permission:', error);
               setNotificationPermission('error');
