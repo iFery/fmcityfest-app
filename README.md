@@ -190,8 +190,9 @@ eas build --platform android
 ### Push Notifications
 
 - Configured via Firebase Cloud Messaging (FCM)
-- Requires APNs key for iOS (upload to Firebase Console)
-- See Firebase documentation for detailed setup
+- **iOS Setup**: Requires APNs Authentication Key (`.p8` file) uploaded to Firebase Console
+- See [iOS Push Notifications Setup Guide](./docs/ios-push-notifications-setup.md) for detailed instructions
+- **Android Setup**: Configured automatically with FCM (see Android setup ticket)
 
 ### Remote Config
 
