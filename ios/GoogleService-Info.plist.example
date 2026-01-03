@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- 
+		INSTRUCTIONS:
+		1. Go to Firebase Console (https://console.firebase.google.com)
+		2. Select your project (or create a new one)
+		3. Go to Project Settings (gear icon) > Your apps
+		4. Add an iOS app if not already added
+		5. Download GoogleService-Info.plist
+		6. Copy it to: ios/GoogleService-Info.plist (rename from .example)
+		7. Ensure the bundle identifier matches: com.fmcityfest.app
+	-->
+	<key>CLIENT_ID</key>
+	<string>YOUR_CLIENT_ID_HERE.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>YOUR_REVERSED_CLIENT_ID_HERE</string>
+	<key>API_KEY</key>
+	<string>YOUR_API_KEY_HERE</string>
+	<key>GCM_SENDER_ID</key>
+	<string>YOUR_GCM_SENDER_ID_HERE</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.fmcityfest.app</string>
+	<key>PROJECT_ID</key>
+	<string>YOUR_PROJECT_ID_HERE</string>
+	<key>STORAGE_BUCKET</key>
+	<string>YOUR_PROJECT_ID_HERE.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false/>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false/>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true/>
+	<key>IS_GCM_ENABLED</key>
+	<true/>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true/>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:YOUR_GCM_SENDER_ID_HERE:ios:YOUR_APP_ID_HERE</string>
+</dict>
+</plist>
