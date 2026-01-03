@@ -31,17 +31,14 @@ export default function App() {
           // Android 13+ (API 33+) requires runtime permission for POST_NOTIFICATIONS
           if (Platform.Version >= 33) {
             try {
-              await PermissionsAndroid.request(
-                PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
-                {
-                  title: 'Notification Permission',
-                  message:
-                    'We need permission to send you push notifications about important updates and events.',
-                  buttonNeutral: 'Ask Me Later',
-                  buttonNegative: 'Cancel',
-                  buttonPositive: 'OK',
-                }
-              );
+              await PermissionsAndroid.request(PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS, {
+                title: 'Notification Permission',
+                message:
+                  'We need permission to send you push notifications about important updates and events.',
+                buttonNeutral: 'Ask Me Later',
+                buttonNegative: 'Cancel',
+                buttonPositive: 'OK',
+              });
             } catch (error) {
               console.error('Error requesting notification permission:', error);
             }
