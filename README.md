@@ -233,6 +233,7 @@ eas build --platform android
 - Verify `GoogleService-Info.plist` (iOS) and `google-services.json` (Android) are in the correct locations
 - Ensure bundle ID / package name matches Firebase project configuration
 - Check Firebase Console to verify the app is registered
+- If you see "No Firebase App '[DEFAULT]' has been created" error, see [Troubleshooting Firebase Initialization](./docs/troubleshooting-firebase-init.md)
 
 ### Metro Bundler Issues
 
