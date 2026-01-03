@@ -6,16 +6,37 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "lint": "eslint . --ext .ts,.tsx",
+    "lint:fix": "eslint . --ext .ts,.tsx --fix",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md}\"",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@react-native-firebase/analytics": "^23.7.0",
+    "@react-native-firebase/app": "^23.7.0",
+    "@react-native-firebase/crashlytics": "^23.7.0",
+    "@react-native-firebase/messaging": "^23.7.0",
+    "@react-native-firebase/remote-config": "^23.7.0",
     "expo": "~54.0.30",
+    "expo-build-properties": "^1.0.10",
+    "expo-dev-client": "^6.0.20",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-native": "0.81.5"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.2",
     "@types/react": "~19.1.0",
+    "@typescript-eslint/eslint-plugin": "^8.51.0",
+    "@typescript-eslint/parser": "^8.51.0",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.4",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-native": "^5.0.0",
+    "prettier": "^3.7.4",
     "typescript": "~5.9.2"
   },
   "private": true
