@@ -14,8 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.fmcityfest.app",
-      "googleServicesFile": "./ios/GoogleService-Info.plist"
+      "bundleIdentifier": "com.fmcityfest.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -24,8 +23,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.fmcityfest.app",
-      "googleServicesFile": "./android/app/google-services.json"
+      "package": "com.fmcityfest.app"
     },
     "web": {
       "favicon": "./assets/favicon.png"
