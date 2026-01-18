@@ -1,74 +1,41 @@
 /**
- * Service for handling notification data and converting it to navigation routes
+ * Navigation helper for notifications
+ * Separated to avoid circular dependencies
+ * Uses navigation queue to ensure navigation is ready
  */
 
-import { NotificationData, NavigationRoute, RootStackParamList } from '../types/navigation';
+import { parseNotificationToNavParams } from '../navigation/linking';
+import { navigationQueue } from '../navigation/navigationQueue';
+import { validateNavigationParams, sanitizeNavigationParams } from '../utils/navigationValidation';
+import type { RootStackParamList } from '../navigation/linking';
 
 /**
- * Converts notification data to a navigation route
- * @param data - The data from remoteMessage.data
- * @returns Navigation route or null if invalid
+ * Handle navigation from notification data
+ * Validates parameters and uses navigation queue to ensure navigation is ready
  */
-export function notificationDataToRoute(
-  data: NotificationData | undefined
-): NavigationRoute | null {
-  if (!data || !data.targetScreen) {
-    console.warn('[NotificationNavigation] Missing targetScreen in notification data', data);
-    return null;
+export function handleNotificationNavigation(data: Record<string, unknown>): void {
+  const navParams = parseNotificationToNavParams(data);
+  
+  if (!navParams) {
+    console.warn('[NotificationNavigation] Invalid notification data, no navigation params');
+    return;
   }
 
-  const screen = data.targetScreen as keyof RootStackParamList;
-
-  // Validate screen name
-  const validScreens: Array<keyof RootStackParamList> = ['Home', 'Post', 'NotificationTest'];
-  if (!validScreens.includes(screen)) {
-    console.warn(
-      `[NotificationNavigation] Invalid targetScreen: ${screen}. Valid screens: ${validScreens.join(', ')}`
-    );
-    return null;
+  // Validate parameters before navigation
+  const validation = validateNavigationParams(navParams.screen, navParams.params);
+  if (!validation.valid) {
+    console.warn('[NotificationNavigation] Invalid navigation params:', validation.error);
+    // Navigate to home as fallback
+    navigationQueue.enqueue('HomeMain');
+    return;
   }
 
-  // Build params based on screen type
-  const params: Record<string, string> = {};
+  // Sanitize parameters
+  const sanitizedParams = navParams.params
+    ? sanitizeNavigationParams(navParams.screen, navParams.params)
+    : undefined;
 
-  switch (screen) {
-    case 'Post':
-      if (!data.postId && !data.itemId) {
-        console.warn(
-          '[NotificationNavigation] Post screen requires postId or itemId in notification data',
-          data
-        );
-        return null;
-      }
-      params.postId = data.postId || data.itemId || '';
-      break;
-
-    case 'Home':
-    case 'NotificationTest':
-      // No params needed
-      break;
-
-    default:
-      console.warn(`[NotificationNavigation] Unhandled screen type: ${screen}`);
-      return null;
-  }
-
-  return {
-    screen,
-    params: Object.keys(params).length > 0 ? params : undefined,
-  };
+  // Queue navigation (will execute when navigation is ready)
+  navigationQueue.enqueue(navParams.screen, sanitizedParams);
 }
 
-/**
- * Safely extracts notification data from remote message
- * @param remoteMessage - The remote message from Firebase
- * @returns Notification data or null if invalid
- */
-export function extractNotificationData(remoteMessage: any): NotificationData | null {
-  if (!remoteMessage || !remoteMessage.data) {
-    console.warn('[NotificationNavigation] Missing data in remote message', remoteMessage);
-    return null;
-  }
-
-  return remoteMessage.data as NotificationData;
-}

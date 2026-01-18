@@ -1,46 +1,61 @@
-import { forwardRef } from 'react';
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { RootStackParamList } from '../types/navigation';
-import HomeScreen from '../screens/HomeScreen';
-import PostScreen from '../screens/PostScreen';
-import NotificationTestScreen from '../screens/NotificationTestScreen';
+import React, { useEffect } from 'react';
+import { NavigationContainer, NavigationContainerRef, LinkingOptions } from '@react-navigation/native';
+import TabNavigator from './TabNavigator';
+import { linking, type RootStackParamList } from './linking';
+import { navigationRef } from './navigationRef';
+import { navigationQueue } from './navigationQueue';
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+export type { RootStackParamList };
 
-const AppNavigator = forwardRef<NavigationContainerRef<RootStackParamList>>((props, ref) => {
+export { navigationRef };
+
+/**
+ * Type-safe navigation function
+ * Note: React Navigation's type system has limitations, but we maintain type safety
+ * at the function signature level while using type assertions internally
+ */
+export function navigate(name: 'HomeMain'): void;
+export function navigate(name: 'ProgramMain'): void;
+export function navigate(name: 'ArtistsMain'): void;
+export function navigate(name: 'FavoritesMain'): void;
+export function navigate(name: 'InfoMain'): void;
+export function navigate(name: 'ArtistDetail', params: { artistId: string; artistName: string }): void;
+export function navigate(name: 'Settings'): void;
+export function navigate(name: 'Partners'): void;
+export function navigate(name: 'News'): void;
+export function navigate(name: 'NewsDetail', params: { newsId: string; newsTitle: string }): void;
+export function navigate(name: 'FAQ'): void;
+export function navigate(
+  name: keyof RootStackParamList,
+  params?: RootStackParamList[keyof RootStackParamList]
+): void {
+  // Use queue system to ensure navigation is ready
+  navigationQueue.enqueue(name, params);
+}
+
+export default function AppNavigator() {
+  // Mark navigation as ready when container is mounted
+  useEffect(() => {
+    // Small delay to ensure navigation container is fully initialized
+    const timer = setTimeout(() => {
+      navigationQueue.setReady();
+    }, 100);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleReady = () => {
+    // Navigation container is ready, drain any queued actions
+    navigationQueue.setReady();
+  };
+
   return (
-    <NavigationContainer
-      ref={ref}
-      linking={{
-        prefixes: ['myapp://'],
-        config: {
-          screens: {
-            Home: 'home',
-            Post: 'post/:postId',
-            NotificationTest: 'test',
-          },
-        },
-      }}
+    <NavigationContainer 
+      ref={navigationRef} 
+      linking={linking as LinkingOptions<RootStackParamList>}
+      onReady={handleReady}
     >
-      <Stack.Navigator
-        initialRouteName="Home"
-        screenOptions={{
-          headerShown: true,
-        }}
-      >
-        <Stack.Screen name="Home" component={HomeScreen} options={{ title: 'FM City Fest' }} />
-        <Stack.Screen name="Post" component={PostScreen} options={{ title: 'Post Details' }} />
-        <Stack.Screen
-          name="NotificationTest"
-          component={NotificationTestScreen}
-          options={{ title: 'Notification Test' }}
-        />
-      </Stack.Navigator>
+      <TabNavigator />
     </NavigationContainer>
   );
-});
-
-AppNavigator.displayName = 'AppNavigator';
-
-export default AppNavigator;
+}

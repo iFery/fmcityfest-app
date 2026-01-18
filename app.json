@@ -1,54 +1,62 @@
 {
   "expo": {
-    "name": "fmcityfest-app",
+    "name": "FMCityFest",
     "slug": "fmcityfest-app",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "fmcityfest",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.fmcityfest.app",
-      "googleServicesFile": "./ios/GoogleService-Info.plist",
-      "infoPlist": {
-        "NSUserNotificationsUsageDescription": "We need permission to send you push notifications about important updates and events.",
-        "CFBundleURLTypes": [
-          {
-            "CFBundleURLSchemes": ["myapp"]
-          }
-        ]
-      },
-      "usesAppleSignIn": false
+      "googleServicesFile": "./GoogleService-Info.plist"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
       "package": "com.fmcityfest.app",
-      "googleServicesFile": "./android/app/google-services.json"
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-dev-client",
       [
-        "expo-build-properties",
+        "expo-notifications",
         {
+          "icon": "./assets/notification-icon.png",
+          "color": "#ffffff",
+          "sounds": []
+        }
+      ],
+      [
+        "@react-native-firebase/app",
+        {
+          "android": {
+            "googleServicesFile": "./google-services.json"
+          },
           "ios": {
-            "useFrameworks": "static"
+            "googleServicesFile": "./GoogleService-Info.plist"
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "your-project-id"
+      }
+    }
   }
 }
+
