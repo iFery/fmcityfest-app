@@ -26,9 +26,12 @@ ios/FMCityFest/GoogleService-Info.plist
 android/app/*.jks
 android/keystore.properties
 
-# Development Firebase config files (if sensitive, add to gitignore)
-# config/firebase/dev/google-services.json
-# config/firebase/dev/GoogleService-Info.plist
+# Firebase config files - should not be committed
+config/firebase/**/google-services.json
+config/firebase/**/GoogleService-Info.plist
+# Also ignore in root directory if they appear there
+/google-services.json
+/GoogleService-Info.plist
 
 # Environment
 .env
