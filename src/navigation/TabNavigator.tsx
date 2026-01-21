@@ -18,6 +18,7 @@ import NewsDetailScreen from '../screens/NewsDetailScreen';
 import FAQScreen from '../screens/FAQScreen';
 import MapScreen from '../screens/MapScreen';
 import DebugScreen from '../screens/DebugScreen';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import type { RootStackParamList } from './linking';
 
 export type TabParamList = {
@@ -102,6 +103,7 @@ function InfoStack() {
       <Stack.Screen name="NewsDetail" component={NewsDetailScreen} />
       <Stack.Screen name="FAQ" component={FAQScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Map" component={MapScreen} options={{ headerShown: false }} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Debug" component={DebugScreen} options={{ headerShown: false }} />
     </Stack.Navigator>
   );

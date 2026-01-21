@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, StatusBar, Animated, Image, Easing } from 'react-native';
+import { View, StyleSheet, StatusBar, Animated, Image, Easing, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { BootstrapProvider, useBootstrap } from './src/providers/BootstrapProvider';
 import { TimelineProvider } from './src/contexts/TimelineContext';
@@ -7,6 +7,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { OfflineBlockedScreen } from './src/screens/OfflineBlockedScreen';
 import { UpdateScreen } from './src/screens/UpdateScreen';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
+import * as NavigationBar from 'expo-navigation-bar';
 
 const MIN_LOADING_TIME = 300;
 const FADE_DURATION = 300;
@@ -200,6 +201,12 @@ function AppContent() {
 }
 
 export default function App() {
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      NavigationBar.setBackgroundColorAsync('#002239');
+      NavigationBar.setButtonStyleAsync('light');
+    }
+  }, []);
   return (
     <SafeAreaProvider>
       <BootstrapProvider>

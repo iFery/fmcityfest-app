@@ -5,6 +5,7 @@ import crashlytics from '@react-native-firebase/crashlytics';
 import { handleNotificationNavigation } from './notificationNavigation';
 import { TimelineApiResponse } from '../api/endpoints';
 import { loadFromCache } from '../utils/cacheManager';
+import { ensureFirebaseInitialized, isFirebaseReady, safeMessagingCall } from './firebase';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 
@@ -27,10 +28,119 @@ class NotificationService {
   private fcmToken: string | null = null;
 
   /**
+   * Získá FCM token (pro push notifikace)
+   */
+  async getToken(): Promise<string | null> {
+    try {
+      if (Platform.OS === 'web') {
+        return null;
+      }
+
+      // Zajisti, že Firebase je inicializován
+      await ensureFirebaseInitialized();
+      if (!isFirebaseReady()) {
+        console.warn('Firebase not ready after ensureFirebaseInitialized, cannot get token');
+        return null;
+      }
+
+      // Získá FCM token pomocí safeMessagingCall pro retry logiku
+      const token = await safeMessagingCall(async (msg) => {
+        return await msg.getToken();
+      });
+
+      if (token) {
+        this.fcmToken = token;
+        return token;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error getting FCM token:', error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch (e) {
+        // Ignore Crashlytics errors
+      }
+      return null;
+    }
+  }
+
+  /**
+   * Nastaví posluchače notifikací
+   */
+  async setupNotificationListeners() {
+    try {
+      if (Platform.OS === 'web') {
+        return {
+          unsubscribeForeground: () => {},
+          notificationListener: { remove: () => {} },
+        };
+      }
+
+      await ensureFirebaseInitialized();
+      if (!isFirebaseReady()) {
+        console.warn('Firebase not ready after ensureFirebaseInitialized, cannot setup listeners');
+        return {
+          unsubscribeForeground: () => {},
+          notificationListener: { remove: () => {} },
+        };
+      }
+
+      // Listener pro notifikace, když je aplikace na popředí
+      const unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
+        console.log('Foreground notification received:', remoteMessage);
+        
+        // Zobrazíme lokální notifikaci pomocí Expo Notifications
+        // (FCM foreground notifikace se nezobrazují automaticky na Androidu)
+        if (remoteMessage.notification) {
+          await Notifications.scheduleNotificationAsync({
+            content: {
+              title: remoteMessage.notification.title || 'Notification',
+              body: remoteMessage.notification.body || '',
+              data: remoteMessage.data || {},
+            },
+            trigger: null, // Okamžitě
+          });
+        }
+      });
+
+      // Listener pro kliknutí na notifikaci (když je aplikace na pozadí nebo zavřená)
+      const notificationListener = Notifications.addNotificationResponseReceivedListener((response) => {
+        const data = response.notification.request.content.data;
+        handleNotificationNavigation(data);
+      });
+
+      return {
+        unsubscribeForeground,
+        notificationListener,
+      };
+    } catch (error) {
+      console.error('Error setting up notification listeners:', error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch (e) {
+        // Ignore Crashlytics errors
+      }
+      return {
+        unsubscribeForeground: () => {},
+        notificationListener: { remove: () => {} },
+      };
+    }
+  }
+
+  /**
    * Požádá o oprávnění k notifikacím
    */
   async requestPermissions(): Promise<boolean> {
     try {
+      if (Platform.OS === 'web') {
+        return false;
+      }
+
       const { status: existingStatus } = await Notifications.getPermissionsAsync();
       let finalStatus = existingStatus;
 
@@ -40,104 +150,56 @@ class NotificationService {
       }
 
       if (finalStatus !== 'granted') {
-        console.warn('Notification permissions not granted');
+        console.log('Notification permission not granted');
         return false;
+      }
+
+      // Pro Android je potřeba ještě nastavit notification channel
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'Default',
+          importance: Notifications.AndroidImportance.MAX,
+          vibrationPattern: [0, 250, 250, 250],
+          lightColor: '#FF231F7C',
+        });
       }
 
       return true;
     } catch (error) {
       console.error('Error requesting notification permissions:', error);
-      crashlytics().recordError(error as Error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch (e) {
+        // Ignore Crashlytics errors
+      }
       return false;
     }
   }
 
   /**
-   * Získá FCM token pro zařízení (pokud má permission)
-   * Nepožádá o oprávnění - použijte requestPermissions() před tím
-   */
-  async getToken(): Promise<string | null> {
-    try {
-      if (Platform.OS === 'web') {
-        console.warn('FCM not supported on web');
-        return null;
-      }
-
-      // Zkontroluje oprávnění (nepožádá)
-      const { status } = await Notifications.getPermissionsAsync();
-      if (status !== 'granted') {
-        console.log('Notification permission not granted, skipping token');
-        return null;
-      }
-
-      // Získá FCM token
-      const token = await messaging().getToken();
-      this.fcmToken = token;
-      
-      console.log('FCM Token:', token);
-      return token;
-    } catch (error) {
-      console.error('Error getting FCM token:', error);
-      crashlytics().recordError(error as Error);
-      return null;
-    }
-  }
-
-  /**
-   * Nastaví listenery pro notifikace
-   * Poznámka: Background message handler musí být registrován v index.js
-   */
-  setupNotificationListeners() {
-    // Listener pro notifikace, když je aplikace na popředí
-    const unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
-      console.log('Foreground notification received:', remoteMessage);
-      
-      // Zobrazí lokální notifikaci
-      await Notifications.scheduleNotificationAsync({
-        content: {
-          title: remoteMessage.notification?.title || 'Nová notifikace',
-          body: remoteMessage.notification?.body || '',
-          data: remoteMessage.data,
-        },
-        trigger: null, // Okamžitě
-      });
-    });
-
-    // Listener pro kliknutí na notifikaci
-    // Works for both foreground and background/closed app states
-    const notificationListener = Notifications.addNotificationResponseReceivedListener((response) => {
-      console.log('Notification tapped:', response);
-      const data = response.notification.request.content.data as Record<string, unknown> | undefined;
-      
-      if (data) {
-        // Use navigation helper with queue system
-        // No delay needed - queue handles timing
-        handleNotificationNavigation(data);
-      }
-    });
-
-    return {
-      unsubscribeForeground,
-      notificationListener,
-    };
-  }
-
-  /**
-   * Odešle testovací notifikaci (pro testování)
+   * Pošle testovací notifikaci
    */
   async sendTestNotification(): Promise<void> {
     try {
       await Notifications.scheduleNotificationAsync({
         content: {
           title: 'Testovací notifikace',
-          body: 'Toto je testovací notifikace z aplikace FMCityFest',
+          body: 'Tato notifikace byla odeslána pro testování.',
           data: { test: true },
         },
         trigger: null, // Okamžitě
       });
     } catch (error) {
       console.error('Error sending test notification:', error);
-      crashlytics().recordError(error as Error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch (e) {
+        // Ignore Crashlytics errors
+      }
       throw error;
     }
   }
@@ -165,7 +227,13 @@ class NotificationService {
       console.log(`Test notification scheduled for ${seconds} seconds`);
     } catch (error) {
       console.error('Error scheduling test notification:', error);
-      crashlytics().recordError(error as Error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch (e) {
+        // Ignore Crashlytics errors
+      }
       throw error;
     }
   }
@@ -176,12 +244,23 @@ class NotificationService {
   async deleteToken(): Promise<void> {
     try {
       if (Platform.OS !== 'web') {
-        await messaging().deleteToken();
+        await ensureFirebaseInitialized();
+        if (isFirebaseReady()) {
+          await safeMessagingCall(async (msg) => {
+            await msg.deleteToken();
+          });
+        }
         this.fcmToken = null;
       }
     } catch (error) {
       console.error('Error deleting FCM token:', error);
-      crashlytics().recordError(error as Error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch (e) {
+        // Ignore Crashlytics errors
+      }
     }
   }
 
@@ -217,6 +296,8 @@ class NotificationService {
 
       const numericArtistId = parseInt(artistId, 10);
       const now = dayjs();
+      // Minimální odstup pro naplánování notifikace - zabraňuje okamžitému zobrazení
+      const minTimeOffset = 5; // sekund
 
       // Najdi všechny koncerty tohoto interpreta
       const artistEvents = timelineData.events.filter(
@@ -227,14 +308,53 @@ class NotificationService {
       for (const event of artistEvents) {
         if (!event.start) continue;
 
+        // Parsuj datum eventu - API vrací ISO 8601 string (může být UTC nebo místní čas)
+        // Použij dayjs, který automaticky rozpozná formát
         const eventStart = dayjs(event.start);
+        
+        // Ověř, že datum je validní
+        if (!eventStart.isValid()) {
+          continue;
+        }
+
         const notificationTime = eventStart.subtract(10, 'minute');
 
-        // Naplánuj pouze budoucí notifikace
-        if (notificationTime.isAfter(now)) {
+        // Naplánuj pouze budoucí notifikace, které jsou alespoň minTimeOffset sekund v budoucnosti
+        // To zabraňuje okamžitému zobrazení notifikace
+        const minNotificationTime = now.add(minTimeOffset, 'second');
+        if (notificationTime.isAfter(minNotificationTime)) {
           const notificationId = `artist_${artistId}_event_${event.id || event.start}`;
 
+          // Převod na Date objekt pro trigger - používáme date místo seconds pro lepší spolehlivost s dlouhými odloženími
+          const notificationDate = notificationTime.toDate();
+          
+          // Ověř, že datum je validní a v budoucnosti
+          if (isNaN(notificationDate.getTime())) {
+            continue;
+          }
+
+          // Ověř, že datum je v budoucnosti (s minimálním odstupem)
+          if (notificationDate.getTime() <= minNotificationTime.toDate().getTime()) {
+            continue;
+          }
+
           try {
+            // Ujistíme se, že Android notification channel existuje (pro Android 8.0+)
+            if (Platform.OS === 'android') {
+              try {
+                await Notifications.setNotificationChannelAsync('default', {
+                  name: 'Default',
+                  importance: Notifications.AndroidImportance.MAX,
+                  vibrationPattern: [0, 250, 250, 250],
+                  lightColor: '#FF231F7C',
+                  sound: true,
+                });
+              } catch (channelError) {
+                // Ignore channel errors
+              }
+            }
+            
+            // Použijeme objekt formát pro trigger - toto by mělo fungovat spolehlivě
             await Notifications.scheduleNotificationAsync({
               identifier: notificationId,
               content: {
@@ -250,18 +370,31 @@ class NotificationService {
                 },
               },
               trigger: {
-                date: notificationTime.toDate(),
+                type: Notifications.SchedulableTriggerInputTypes.DATE,
+                date: notificationDate,
               },
             });
           } catch (error) {
             console.error(`Error scheduling notification for artist ${artistName}:`, error);
-            crashlytics().recordError(error as Error);
+            try {
+              if (isFirebaseReady()) {
+                crashlytics().recordError(error as Error);
+              }
+            } catch (e) {
+              // Ignore Crashlytics errors
+            }
           }
         }
       }
     } catch (error) {
       console.error('Error scheduling artist notifications:', error);
-      crashlytics().recordError(error as Error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch (e) {
+        // Ignore Crashlytics errors
+      }
     }
   }
 
@@ -285,14 +418,19 @@ class NotificationService {
       for (const notification of notificationsToCancel) {
         try {
           await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-          console.log(`Cancelled notification ${notification.identifier}`);
         } catch (error) {
           console.error(`Error cancelling notification ${notification.identifier}:`, error);
         }
       }
     } catch (error) {
       console.error('Error cancelling artist notifications:', error);
-      crashlytics().recordError(error as Error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch (e) {
+        // Ignore Crashlytics errors
+      }
     }
   }
 
@@ -324,12 +462,15 @@ class NotificationService {
         }
       }
 
-      if (cancelledCount > 0) {
-        console.log(`Cancelled ${cancelledCount} artist notifications`);
-      }
     } catch (error) {
       console.error('Error cancelling all artist notifications:', error);
-      crashlytics().recordError(error as Error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch (e) {
+        // Ignore Crashlytics errors
+      }
     }
   }
 
@@ -359,10 +500,15 @@ class NotificationService {
       }
     } catch (error) {
       console.error('Error updating all artist notifications:', error);
-      crashlytics().recordError(error as Error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch (e) {
+        // Ignore Crashlytics errors
+      }
     }
   }
 }
 
 export const notificationService = new NotificationService();
-

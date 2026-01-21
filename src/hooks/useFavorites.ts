@@ -233,9 +233,58 @@ export function useFavorites(): UseFavoritesResult {
 
   const toggleEvent = useCallback(
     (eventId: string) => {
+      if (!timelineData) {
+        toggleEventFavorite(eventId);
+        return;
+      }
+
+      const wasEventFavorite = storeIsEventFavorite(eventId);
+      
+      // Najdi event a získej interpret_id
+      const event = (timelineData.events as TimelineEvent[]).find((e) => e.id === eventId);
+      if (!event || !event.interpret_id) {
+        toggleEventFavorite(eventId);
+        return;
+      }
+
+      const artistId = event.interpret_id.toString();
+      const isArtistFavorite = storeIsArtistFavorite(artistId);
+      const numericArtistId = parseInt(artistId, 10);
+
+      // Pokud odebíráme event, zkontroluj, kolik eventů interpreta zbývá v oblíbených (před změnou)
+      let willHaveNoFavoriteEvents = false;
+      if (wasEventFavorite && isArtistFavorite) {
+        const artistEvents = (timelineData.events as TimelineEvent[]).filter(
+          (e) => e.interpret_id === numericArtistId && e.id
+        );
+        
+        // Počítáme eventy v oblíbených kromě toho, který právě odebíráme
+        const remainingFavoriteEvents = artistEvents.filter(
+          (e) => e.id !== eventId && storeIsEventFavorite(e.id || '')
+        );
+        
+        // Pokud už nezbývají žádné eventy, po odebrání tohoto už nebude žádný
+        willHaveNoFavoriteEvents = remainingFavoriteEvents.length === 0;
+      }
+
+      // Přidej/odeber event z oblíbených
       toggleEventFavorite(eventId);
+
+      if (!wasEventFavorite) {
+        // Event byl přidán do oblíbených
+        // Pokud interpret není v oblíbených, přidej ho (to zajistí, že se naplánují notifikace)
+        if (!isArtistFavorite) {
+          toggleArtistFavorite(artistId);
+        }
+      } else {
+        // Event byl odebrán z oblíbených
+        // Pokud už interpret nemá žádné eventy v oblíbených, odeber ho z oblíbených
+        if (willHaveNoFavoriteEvents) {
+          toggleArtistFavorite(artistId);
+        }
+      }
     },
-    [toggleEventFavorite]
+    [toggleEventFavorite, toggleArtistFavorite, storeIsEventFavorite, storeIsArtistFavorite, timelineData]
   );
 
   const toggle = useCallback(

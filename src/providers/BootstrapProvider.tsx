@@ -9,7 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { preloadAllData } from '../services/preloadService';
 import { hasAnyValidCache, getOldestCacheAge, loadFromCache, checkAndClearCacheOnVersionUpgrade } from '../utils/cacheManager';
 import { crashlyticsService } from '../services/crashlytics';
-import { initializeFirebase } from '../services/firebase';
+import { initializeFirebase, ensureFirebaseInitialized } from '../services/firebase';
 import { remoteConfigService } from '../services/remoteConfig';
 import { notificationService } from '../services/notifications';
 import { Platform } from 'react-native';
@@ -63,7 +63,10 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
         crashlyticsService.setAttribute('bootstrap_attempt', String(retryKey + 1));
 
         // Initialize Firebase first (required for Crashlytics)
+        // We use ensureFirebaseInitialized which waits for auto-initialization
         try {
+          await ensureFirebaseInitialized();
+          if (!isMounted || abortController.signal.aborted) return;
           await initializeFirebase();
           if (!isMounted || abortController.signal.aborted) return;
           crashlyticsService.log('Firebase initialized');
@@ -157,7 +160,7 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
               crashlyticsService.log('FCM Token registered');
             }
             // Store listeners (they live for app lifetime, no cleanup needed)
-            notificationService.setupNotificationListeners();
+            await notificationService.setupNotificationListeners();
           } catch (notifError) {
             console.warn('Notification setup failed:', notifError);
           }

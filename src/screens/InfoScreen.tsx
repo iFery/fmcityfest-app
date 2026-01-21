@@ -51,6 +51,13 @@ export default function InfoScreen() {
       color: '#EA5178',
     },
     {
+      id: 'notifications',
+      title: 'Notifikace',
+      icon: 'notifications',
+      onPress: () => navigation.navigate('Notifications'),
+      color: '#21AAB0',
+    },
+    {
       id: 'settings',
       title: 'Nastavení',
       icon: 'settings',

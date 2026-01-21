@@ -4,7 +4,19 @@
 
 import React, { Component, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { crashlyticsService } from '../services/crashlytics';
+
+// Lazy import crashlyticsService to avoid Firebase initialization during module import
+let crashlyticsService: any = null;
+const getCrashlyticsService = () => {
+  if (!crashlyticsService) {
+    try {
+      crashlyticsService = require('../services/crashlytics').crashlyticsService;
+    } catch (error) {
+      console.warn('⚠️ [ErrorBoundary.tsx] Failed to load crashlyticsService:', error);
+    }
+  }
+  return crashlyticsService;
+};
 
 interface Props {
   children: ReactNode;
@@ -27,9 +39,16 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log to Crashlytics
-    crashlyticsService.recordError(error);
-    crashlyticsService.log(`ErrorBoundary: ${errorInfo.componentStack}`);
+    // Log to Crashlytics (lazy loaded)
+    try {
+      const service = getCrashlyticsService();
+      if (service) {
+        service.recordError(error);
+        service.log(`ErrorBoundary: ${errorInfo.componentStack}`);
+      }
+    } catch (e) {
+      console.warn('⚠️ [ErrorBoundary] Failed to log to Crashlytics:', e);
+    }
     
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
@@ -104,9 +123,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-
-
-
-
-
-

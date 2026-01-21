@@ -1,4 +1,5 @@
 import crashlytics from '@react-native-firebase/crashlytics';
+import { isFirebaseReady } from './firebase';
 
 class CrashlyticsService {
   /**
@@ -6,9 +7,12 @@ class CrashlyticsService {
    */
   setEnabled(enabled: boolean): void {
     try {
+      if (!isFirebaseReady()) {
+        return;
+      }
       crashlytics().setCrashlyticsCollectionEnabled(enabled);
-    } catch (e) {
-      console.error('Error setting Crashlytics enabled:', e);
+    } catch (e: any) {
+      console.error('❌ [crashlytics.ts] Error setting Crashlytics enabled:', e);
     }
   }
 
@@ -17,9 +21,12 @@ class CrashlyticsService {
    */
   recordError(error: Error, jsErrorName?: string): void {
     try {
+      if (!isFirebaseReady()) {
+        return;
+      }
       crashlytics().recordError(error, jsErrorName);
-    } catch (e) {
-      console.error('Error recording to Crashlytics:', e);
+    } catch (e: any) {
+      console.error('❌ [crashlytics.ts] Error recording to Crashlytics:', e);
     }
   }
 
@@ -28,6 +35,10 @@ class CrashlyticsService {
    */
   setAttribute(key: string, value: string): void {
     try {
+      if (!isFirebaseReady()) {
+        console.warn('Crashlytics: Firebase not ready, skipping setAttribute');
+        return;
+      }
       crashlytics().setAttribute(key, value);
     } catch (e) {
       console.error('Error setting Crashlytics attribute:', e);
@@ -39,6 +50,10 @@ class CrashlyticsService {
    */
   setUserId(userId: string): void {
     try {
+      if (!isFirebaseReady()) {
+        console.warn('Crashlytics: Firebase not ready, skipping setUserId');
+        return;
+      }
       crashlytics().setUserId(userId);
     } catch (e) {
       console.error('Error setting Crashlytics user ID:', e);
@@ -50,6 +65,10 @@ class CrashlyticsService {
    */
   log(message: string): void {
     try {
+      if (!isFirebaseReady()) {
+        console.warn('Crashlytics: Firebase not ready, skipping log');
+        return;
+      }
       crashlytics().log(message);
     } catch (e) {
       console.error('Error logging to Crashlytics:', e);
@@ -60,9 +79,30 @@ class CrashlyticsService {
    * Vynutí testovací crash (pouze pro testování)
    */
   forceCrash(): void {
-    crashlytics().crash();
+    try {
+      if (!isFirebaseReady()) {
+        console.warn('Crashlytics: Firebase not ready, cannot force crash');
+        return;
+      }
+      crashlytics().crash();
+    } catch (e) {
+      console.error('Error forcing crash:', e);
+    }
   }
 }
 
-export const crashlyticsService = new CrashlyticsService();
+// Lazy initialization - create instance only when needed
+let crashlyticsServiceInstance: CrashlyticsService | null = null;
 
+export const crashlyticsService = new Proxy({} as CrashlyticsService, {
+  get(target, prop) {
+    if (!crashlyticsServiceInstance) {
+      crashlyticsServiceInstance = new CrashlyticsService();
+    }
+    const value = crashlyticsServiceInstance[prop as keyof CrashlyticsService];
+    if (typeof value === 'function') {
+      return value.bind(crashlyticsServiceInstance);
+    }
+    return value;
+  }
+});

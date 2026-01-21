@@ -22,8 +22,10 @@ if (!ENVIRONMENTS.includes(environment)) {
 
 const rootDir = path.resolve(__dirname, '..');
 const configDir = path.join(rootDir, 'config', 'firebase', environment);
-const androidTarget = path.join(rootDir, 'android', 'app', 'google-services.json');
-const iosTarget = path.join(rootDir, 'ios', 'FMCityFest', 'GoogleService-Info.plist');
+// Both Android and iOS: Copy to root - Firebase plugin will copy them to correct native folders during prebuild
+// This avoids issues with prebuild --clean deleting android/ and ios/ folders
+const androidTarget = path.join(rootDir, 'google-services.json');
+const iosTarget = path.join(rootDir, 'GoogleService-Info.plist');
 
 const androidSource = path.join(configDir, 'google-services.json');
 const iosSource = path.join(configDir, 'GoogleService-Info.plist');
@@ -32,12 +34,6 @@ console.log(`📋 Copying Firebase config for environment: ${environment.toUpper
 
 // Copy Android config
 if (fs.existsSync(androidSource)) {
-  // Ensure target directory exists
-  const androidTargetDir = path.dirname(androidTarget);
-  if (!fs.existsSync(androidTargetDir)) {
-    fs.mkdirSync(androidTargetDir, { recursive: true });
-  }
-  
   fs.copyFileSync(androidSource, androidTarget);
   console.log(`✅ Copied: ${androidSource} → ${androidTarget}`);
 } else {
@@ -47,12 +43,6 @@ if (fs.existsSync(androidSource)) {
 
 // Copy iOS config
 if (fs.existsSync(iosSource)) {
-  // Ensure target directory exists
-  const iosTargetDir = path.dirname(iosTarget);
-  if (!fs.existsSync(iosTargetDir)) {
-    fs.mkdirSync(iosTargetDir, { recursive: true });
-  }
-  
   fs.copyFileSync(iosSource, iosTarget);
   console.log(`✅ Copied: ${iosSource} → ${iosTarget}`);
 } else {

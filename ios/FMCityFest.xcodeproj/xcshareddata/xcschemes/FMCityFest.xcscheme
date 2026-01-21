@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-               BuildableName = "FMCityFest.app"
-               BlueprintName = "FMCityFest"
-               ReferencedContainer = "container:FMCityFest.xcodeproj">
+               BuildableName = "FMCITYFEST.app"
+               BlueprintName = "FMCITYFEST"
+               ReferencedContainer = "container:FMCITYFEST.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "00E356ED1AD99517003FC87E"
-               BuildableName = "FMCityFestTests.xctest"
-               BlueprintName = "FMCityFestTests"
-               ReferencedContainer = "container:FMCityFest.xcodeproj">
+               BuildableName = "FMCITYFESTTests.xctest"
+               BlueprintName = "FMCITYFESTTests"
+               ReferencedContainer = "container:FMCITYFEST.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "FMCityFest.app"
-            BlueprintName = "FMCityFest"
-            ReferencedContainer = "container:FMCityFest.xcodeproj">
+            BuildableName = "FMCITYFEST.app"
+            BlueprintName = "FMCITYFEST"
+            ReferencedContainer = "container:FMCITYFEST.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -72,9 +72,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "13B07F861A680F5B00A75B9A"
-            BuildableName = "FMCityFest.app"
-            BlueprintName = "FMCityFest"
-            ReferencedContainer = "container:FMCityFest.xcodeproj">
+            BuildableName = "FMCITYFEST.app"
+            BlueprintName = "FMCITYFEST"
+            ReferencedContainer = "container:FMCITYFEST.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

@@ -14,6 +14,7 @@ export type RootStackParamList = {
   FAQ: undefined;
   Map: undefined;
   Debug: undefined;
+  Notifications: undefined;
 };
 
 const prefix = Linking.createURL('/');
@@ -140,6 +141,7 @@ export const linking = {
           News: 'news',
           FAQ: 'faq',
           Map: 'map',
+          Notifications: 'notifications',
         },
       },
     },
