@@ -56,7 +56,7 @@ describe('useNetworkStatus', () => {
       type: 'wifi',
     } as NetInfoState);
 
-    const { result, rerender } = renderHook(() => useNetworkStatus());
+    const { result } = renderHook(() => useNetworkStatus());
 
     await waitFor(() => {
       expect(result.current.isConnected).toBe(true);
@@ -112,4 +112,3 @@ describe('useNetworkStatus', () => {
     expect(mockedNetInfo.fetch).toHaveBeenCalled();
   });
 });
-

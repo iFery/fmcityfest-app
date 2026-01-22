@@ -3,7 +3,7 @@
  * Displays full news article with HTML content
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,6 @@ import {
   StatusBar,
   ScrollView,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { RouteProp } from '@react-navigation/native';
@@ -37,6 +36,7 @@ export default function NewsDetailScreen() {
   const navigation = useNavigation<NewsDetailScreenNavigationProp>();
   const { newsId } = route.params;
   const [news, setNews] = useState<News | null>(null);
+  const newsRef = useRef<News | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -54,6 +54,7 @@ export default function NewsDetailScreen() {
           const cachedItem = cachedNews.find((item) => item.id === newsId);
           if (cachedItem) {
             setNews(cachedItem);
+            newsRef.current = cachedItem;
             setLoading(false);
           }
         }
@@ -71,9 +72,10 @@ export default function NewsDetailScreen() {
           }
 
           setNews(newsData);
+          newsRef.current = newsData;
         } catch (apiError) {
           if (apiError instanceof Error && apiError.name === 'AbortError') return;
-          if (!news && isMounted) throw apiError;
+          if (!newsRef.current && isMounted) throw apiError;
         }
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') return;
@@ -103,12 +105,6 @@ export default function NewsDetailScreen() {
     } catch {
       return dateString;
     }
-  };
-
-  const handleLinkPress = (url: string) => {
-    Linking.openURL(url).catch((err) => {
-      console.warn('Nešlo otevřít odkaz:', url, err);
-    });
   };
 
   const renderHtmlContent = (html: string) => {

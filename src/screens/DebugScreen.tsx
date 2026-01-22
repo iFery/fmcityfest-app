@@ -18,15 +18,15 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/cs';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
 import Header from '../components/Header';
-
-dayjs.locale('cs');
-dayjs.extend(localizedFormat);
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { useNotificationPreferencesStore } from '../stores/notificationPreferencesStore';
 import { clearAllCache, getCacheAge } from '../utils/cacheManager';
 import { remoteConfigService } from '../services/remoteConfig';
 import { crashlyticsService } from '../services/crashlytics';
 import { getFirebaseProjectId } from '../services/firebase';
+
+dayjs.locale('cs');
+dayjs.extend(localizedFormat);
 
 const HEADER_HEIGHT = 130;
 
@@ -52,38 +52,7 @@ export default function DebugScreen() {
   const [remoteConfigValues, setRemoteConfigValues] = useState<Record<string, string>>({});
   const [firebaseProjectId, setFirebaseProjectId] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadDebugInfo();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      loadDebugInfo();
-    }, [])
-  );
-
-  const loadDebugInfo = async () => {
-    await Promise.all([
-      loadCacheInfo(),
-      loadAsyncStorageInfo(),
-      loadNotificationPermission(),
-      loadScheduledNotifications(),
-      loadRemoteConfig(),
-      loadFirebaseProjectId(),
-    ]);
-  };
-
-  const loadFirebaseProjectId = () => {
-    try {
-      const projectId = getFirebaseProjectId();
-      setFirebaseProjectId(projectId);
-    } catch (error) {
-      console.error('Error loading Firebase project ID:', error);
-      setFirebaseProjectId(null);
-    }
-  };
-
-  const loadCacheInfo = async () => {
+  const loadCacheInfo = React.useCallback(async () => {
     const info: CacheInfo[] = await Promise.all(
       CACHE_KEYS.map(async (key) => {
         const age = await getCacheAge(key);
@@ -95,27 +64,27 @@ export default function DebugScreen() {
       })
     );
     setCacheInfo(info);
-  };
+  }, []);
 
-  const loadAsyncStorageInfo = async () => {
+  const loadAsyncStorageInfo = React.useCallback(async () => {
     try {
       const keys = await AsyncStorage.getAllKeys();
       setAsyncStorageKeysCount(keys.length);
     } catch (error) {
       console.error('Error loading AsyncStorage info:', error);
     }
-  };
+  }, []);
 
-  const loadNotificationPermission = async () => {
+  const loadNotificationPermission = React.useCallback(async () => {
     try {
       const { status } = await Notifications.getPermissionsAsync();
       setNotificationPermission(status);
-    } catch (error) {
+    } catch {
       setNotificationPermission('unknown');
     }
-  };
+  }, []);
 
-  const loadScheduledNotifications = async () => {
+  const loadScheduledNotifications = React.useCallback(async () => {
     try {
       const notifications = await Notifications.getAllScheduledNotificationsAsync();
       setScheduledNotifications(notifications);
@@ -123,16 +92,54 @@ export default function DebugScreen() {
       console.error('Error loading scheduled notifications:', error);
       setScheduledNotifications([]);
     }
-  };
+  }, []);
 
-  const loadRemoteConfig = async () => {
+  const loadRemoteConfig = React.useCallback(async () => {
     try {
       const all = remoteConfigService.getAll();
       setRemoteConfigValues(all);
     } catch (error) {
       console.error('Error loading Remote Config:', error);
     }
-  };
+  }, []);
+
+  const loadFirebaseProjectId = React.useCallback(() => {
+    try {
+      const projectId = getFirebaseProjectId();
+      setFirebaseProjectId(projectId);
+    } catch (error) {
+      console.error('Error loading Firebase project ID:', error);
+      setFirebaseProjectId(null);
+    }
+  }, []);
+
+  const loadDebugInfo = React.useCallback(async () => {
+    await Promise.all([
+      loadCacheInfo(),
+      loadAsyncStorageInfo(),
+      loadNotificationPermission(),
+      loadScheduledNotifications(),
+      loadRemoteConfig(),
+      loadFirebaseProjectId(),
+    ]);
+  }, [
+    loadCacheInfo,
+    loadAsyncStorageInfo,
+    loadNotificationPermission,
+    loadScheduledNotifications,
+    loadRemoteConfig,
+    loadFirebaseProjectId,
+  ]);
+
+  useEffect(() => {
+    loadDebugInfo();
+  }, [loadDebugInfo]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      loadDebugInfo();
+    }, [loadDebugInfo])
+  );
 
   const handleScheduleTestNotification = async () => {
     try {
@@ -261,7 +268,7 @@ export default function DebugScreen() {
               await loadCacheInfo();
               await loadAsyncStorageInfo();
               Alert.alert('Hotovo', 'Cache byla vymazána');
-            } catch (error) {
+            } catch {
               Alert.alert('Chyba', 'Nepodařilo se vymazat cache');
             }
           },
@@ -575,4 +582,3 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
-

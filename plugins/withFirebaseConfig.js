@@ -20,7 +20,6 @@ module.exports = (config) => {
   const rootDir = path.resolve(__dirname, '..');
   const configDir = path.join(rootDir, 'config', 'firebase', envFolder);
   const androidSource = path.join(configDir, 'google-services.json');
-  const iosSource = path.join(configDir, 'GoogleService-Info.plist');
   
   // During prebuild, ensure native folders have the correct config
   // This is a backup - the main copying happens in app.config.js

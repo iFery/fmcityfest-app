@@ -7,7 +7,6 @@
 import { parseNotificationToNavParams } from '../navigation/linking';
 import { navigationQueue } from '../navigation/navigationQueue';
 import { validateNavigationParams, sanitizeNavigationParams } from '../utils/navigationValidation';
-import type { RootStackParamList } from '../navigation/linking';
 
 /**
  * Handle navigation from notification data
@@ -38,4 +37,3 @@ export function handleNotificationNavigation(data: Record<string, unknown>): voi
   // Queue navigation (will execute when navigation is ready)
   navigationQueue.enqueue(navParams.screen, sanitizedParams);
 }
-

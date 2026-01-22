@@ -94,16 +94,7 @@ export default function ArtistsScreen() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
-  const [notificationPermissionGranted, setNotificationPermissionGranted] = useState<boolean | null>(null);
   const [showFavoritePermissionModal, setShowFavoritePermissionModal] = useState(false);
-
-  React.useEffect(() => {
-    const checkPermission = async () => {
-      const { status } = await Notifications.getPermissionsAsync();
-      setNotificationPermissionGranted(status === 'granted');
-    };
-    checkPermission();
-  }, []);
 
   const categories = useMemo(() => {
     const cats = Array.from(new Set(artists.map((artist) => artist.genre || 'Ostatní')));
@@ -165,12 +156,12 @@ export default function ArtistsScreen() {
     return map;
   }, [filteredArtists, timelineData, artistEventsMap, favoriteArtists, favoriteEvents]);
 
-  const handleArtistPress = (artist: Artist) => {
+  const handleArtistPress = useCallback((artist: Artist) => {
     navigation.navigate('ArtistDetail', {
       artistId: artist.id,
       artistName: artist.name,
     });
-  };
+  }, [navigation]);
 
   const handleFavoritePress = useCallback(
     async (artistId: string) => {

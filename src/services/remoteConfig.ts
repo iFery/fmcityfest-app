@@ -73,7 +73,7 @@ class RemoteConfigService {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);
         }
-      } catch (e) {
+      } catch {
         // Crashlytics možná není dostupný
       }
       return false;

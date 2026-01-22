@@ -25,7 +25,6 @@ import { useFavorites } from '../hooks/useFavorites';
 import { useTimeline } from '../contexts/TimelineContext';
 import Header from '../components/Header';
 import { useTheme } from '../theme/ThemeProvider';
-import type { Stage } from '../types';
 
 dayjs.locale('cs');
 dayjs.extend(utc);
@@ -51,7 +50,7 @@ interface TimelineEvent {
 export default function ProgramScreen() {
   const { globalStyles } = useTheme();
   const navigation = useNavigation<ProgramScreenNavigationProp>();
-  const { events, loading, error } = useEvents();
+  const { loading, error } = useEvents();
   const { favoriteEvents } = useFavorites();
   const previousTabRef = useRef<string | null>(null);
 

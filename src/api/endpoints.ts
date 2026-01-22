@@ -4,13 +4,13 @@
  */
 
 import { apiClient } from './client';
-import type { Event, Artist, Partner, News, FAQCategory } from '../types';
+import type { Event, Partner, News, FAQCategory } from '../types';
 
 /**
  * API Response types for artists endpoint
  */
 export interface ArtistsApiResponse {
-  records: Array<{
+  records: {
     id: number;
     fields: {
       nav_id: number;
@@ -24,11 +24,11 @@ export interface ArtistsApiResponse {
       description: string;
     };
     show_on_website: number;
-  }>;
-  categories: Array<{
+  }[];
+  categories: {
     name: string;
     tag: string;
-  }>;
+  }[];
 }
 
 /**
@@ -45,15 +45,15 @@ export interface TimelineApiResponse {
       end: string;
     };
   };
-  stages: Array<{
+  stages: {
     stage: string;
     stage_name: string;
     class: string;
     stageColors: string;
     stageColorsArtist: string;
     sort: number;
-  }>;
-  events: Array<{
+  }[];
+  events: {
     id?: string;
     name?: string;
     time?: string;
@@ -67,7 +67,7 @@ export interface TimelineApiResponse {
     end?: string;
     interpret_id?: number;
     [key: string]: unknown;
-  }>;
+  }[];
 }
 
 /**
@@ -149,4 +149,3 @@ export const newsApi = {
 export const faqApi = {
   getAll: () => apiClient.get<FAQCategory[]>('/faq.php'),
 };
-

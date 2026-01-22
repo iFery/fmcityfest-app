@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { NavigationContainer, NavigationContainerRef, LinkingOptions, DefaultTheme } from '@react-navigation/native';
+import { NavigationContainer, LinkingOptions, DefaultTheme } from '@react-navigation/native';
 import TabNavigator from './TabNavigator';
 import { linking, type RootStackParamList } from './linking';
 import { navigationRef } from './navigationRef';

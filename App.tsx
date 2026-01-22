@@ -34,7 +34,7 @@ function LoadingScreen() {
 }
 
 function AppContent() {
-  const { state, timelineData, updateInfo, skipUpdate } = useBootstrap();
+  const { state, updateInfo, skipUpdate } = useBootstrap();
   const loadingOpacity = useRef(new Animated.Value(1)).current;
   const appOpacity = useRef(new Animated.Value(0)).current;
   const updateScreenOpacity = useRef(new Animated.Value(0)).current;

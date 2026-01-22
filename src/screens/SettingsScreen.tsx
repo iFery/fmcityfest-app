@@ -111,7 +111,7 @@ export default function SettingsScreen() {
         refetchPartners(),
       ]);
       Alert.alert('Hotovo', 'Data byla obnovena');
-    } catch (error) {
+    } catch {
       Alert.alert('Chyba', 'Nepodařilo se obnovit data');
     }
   };

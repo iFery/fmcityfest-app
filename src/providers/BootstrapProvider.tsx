@@ -78,7 +78,7 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
         // Setup Crashlytics attributes
         try {
           crashlyticsService.setAttribute('platform', Platform.OS);
-        } catch (e) {
+        } catch {
           // Ignore if Crashlytics is not available
         }
 
@@ -359,4 +359,3 @@ export function useBootstrap(): BootstrapContextValue {
   }
   return context;
 }
-

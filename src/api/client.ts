@@ -97,7 +97,7 @@ class ApiClient {
         let data: T;
         try {
           data = await response.json();
-        } catch (parseError) {
+        } catch {
           throw new ApiError(
             'Failed to parse response as JSON',
             response.status
@@ -192,4 +192,3 @@ class ApiClient {
 
 // Export singleton instance
 export const apiClient = new ApiClient();
-

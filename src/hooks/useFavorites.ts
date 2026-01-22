@@ -3,8 +3,7 @@
  * Provides unified API for toggling and checking favorites (artists and events)
  */
 
-import React, { useCallback, useEffect, useRef } from 'react';
-import * as Notifications from 'expo-notifications';
+import { useCallback, useEffect, useRef } from 'react';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { notificationService } from '../services/notifications';
 import { useNotificationPreferencesStore } from '../stores/notificationPreferencesStore';
@@ -335,5 +334,4 @@ export function useFavorites(): UseFavoritesResult {
     clearAll,
   };
 }
-
 

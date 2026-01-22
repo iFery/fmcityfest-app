@@ -14,7 +14,7 @@ import {
   Image,
   Platform,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { UpdateInfo, openStoreForUpdate } from '../services/updateService';
 import { crashlyticsService } from '../services/crashlytics';
 
@@ -242,4 +242,3 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 });
-

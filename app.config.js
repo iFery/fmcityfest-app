@@ -39,7 +39,7 @@ module.exports = ({ config }) => {
           environment = markerContent;
           console.log(`✅ [app.config.js] Detected environment from Xcode build marker: ${environment}`);
         }
-      } catch (e) {
+      } catch (_e) {
         // If reading marker fails, continue to Firebase config detection
       }
     }
@@ -104,9 +104,9 @@ module.exports = ({ config }) => {
         if (targetContent.project_info?.project_id === sourceContent.project_info?.project_id) {
           shouldCopy = false; // Already correct
         }
-      } catch (e) {
-        // If parsing fails, copy anyway
-        shouldCopy = true;
+    } catch (_e) {
+      // If parsing fails, copy anyway
+      shouldCopy = true;
       }
     }
     
@@ -264,4 +264,3 @@ module.exports = ({ config }) => {
     },
   };
 };
-

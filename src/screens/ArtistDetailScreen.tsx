@@ -53,7 +53,7 @@ export default function ArtistDetailScreen() {
   const isFocused = useIsFocused();
   const { artistId } = route.params;
   const { artists, loading, error, refetch } = useArtists();
-  const { toggleArtist, toggleEvent, isArtistFavorite, isEventFavorite, favoriteArtists, favoriteEvents } = useFavorites();
+  const { toggleArtist, toggleEvent, favoriteArtists, favoriteEvents } = useFavorites();
 
   const [toastVisible, setToastVisible] = useState(false);
   const [toastMessage, setToastMessage] = useState('');

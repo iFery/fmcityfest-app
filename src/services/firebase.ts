@@ -2,9 +2,7 @@ import firebase from '@react-native-firebase/app';
 import messaging from '@react-native-firebase/messaging';
 import remoteConfig from '@react-native-firebase/remote-config';
 import crashlytics from '@react-native-firebase/crashlytics';
-import { Platform } from 'react-native';
 
-let isInitialized = false;
 let initializationPromise: Promise<void> | null = null;
 
 /**
@@ -22,7 +20,6 @@ export const ensureFirebaseInitialized = async (): Promise<void> => {
     const apps = firebase.apps;
     
     if (apps && apps.length > 0) {
-      isInitialized = true;
       return;
     }
   } catch (error: any) {
@@ -96,9 +93,8 @@ export const ensureFirebaseInitialized = async (): Promise<void> => {
           // Pokud to nefunguje, zkusíme získat default app (což může vyhodit chybu)
           // firebase.app() vyhodí chybu, pokud není inicializován, ale zkusíme to
           try {
-            const app = firebase.app();
+            firebase.app();
             // Pokud jsme sem došli, Firebase je inicializován
-            isInitialized = true;
             return;
           } catch (appError: any) {
             // firebase.app() vyhodí chybu, pokud není inicializován
@@ -120,7 +116,7 @@ export const ensureFirebaseInitialized = async (): Promise<void> => {
       let finalAppsLength = 0;
       try {
         finalAppsLength = firebase.apps.length;
-      } catch (error) {
+      } catch {
         finalAppsLength = 0;
       }
       
@@ -131,11 +127,9 @@ export const ensureFirebaseInitialized = async (): Promise<void> => {
         return; // Vrátíme se bez erroru
       }
 
-      isInitialized = true;
     } catch (error: any) {
       console.error('❌ [firebase.ts] Error ensuring Firebase initialization:', error);
       console.error('❌ [firebase.ts] Error details:', error?.message, error?.stack?.substring(0, 300));
-      isInitialized = false;
       initializationPromise = null;
       // Nehážeme error - aplikace by měla pokračovat i bez Firebase
       // throw error;

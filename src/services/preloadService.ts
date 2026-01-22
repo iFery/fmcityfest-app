@@ -2,7 +2,7 @@
  * Preload service - loads all critical data into cache on app startup
  */
 
-import { artistsApi, eventsApi, partnersApi, newsApi, faqApi, type TimelineApiResponse, type PartnerApiResponse } from '../api';
+import { artistsApi, eventsApi, partnersApi, newsApi, faqApi, type TimelineApiResponse } from '../api';
 import { saveToCache, hasValidCache } from '../utils/cacheManager';
 import { crashlyticsService } from './crashlytics';
 import type { Artist, Event, Partner, News, FAQCategory } from '../types';
@@ -18,7 +18,7 @@ export type PreloadProgressCallback = (progress: PreloadProgress) => void;
 /**
  * Transform artists API response to our format
  */
-function transformArtists(response: { records: Array<{
+function transformArtists(response: { records: {
   id: number;
   fields: {
     nav_id: number;
@@ -30,7 +30,7 @@ function transformArtists(response: { records: Array<{
     description: string;
   };
   show_on_website: number;
-}> }): Artist[] {
+}[] }): Artist[] {
   return response.records
     .filter((record) => record.show_on_website === 1)
     .map((record) => ({
@@ -308,4 +308,3 @@ async function preloadFAQ(): Promise<void> {
     throw error;
   }
 }
-

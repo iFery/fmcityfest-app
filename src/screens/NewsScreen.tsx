@@ -30,12 +30,12 @@ export default function NewsScreen() {
   const navigation = useNavigation<NewsScreenNavigationProp>();
   const { news, loading, error } = useNews();
 
-  const handleNewsPress = (newsItem: News) => {
+  const handleNewsPress = useCallback((newsItem: News) => {
     navigation.navigate('NewsDetail', {
       newsId: newsItem.id,
       newsTitle: newsItem.title,
     });
-  };
+  }, [navigation]);
 
   const formatDate = useCallback((dateString: string) => {
     try {

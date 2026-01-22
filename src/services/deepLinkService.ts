@@ -7,7 +7,6 @@
 import * as Linking from 'expo-linking';
 import { navigationQueue } from '../navigation/navigationQueue';
 import { validateNavigationParams, sanitizeNavigationParams } from '../utils/navigationValidation';
-import { parseNotificationToNavParams } from '../navigation/linking';
 import type { RootStackParamList } from '../navigation/linking';
 
 class DeepLinkService {
@@ -181,5 +180,4 @@ class DeepLinkService {
 }
 
 export const deepLinkService = new DeepLinkService();
-
 

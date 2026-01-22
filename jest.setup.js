@@ -56,7 +56,11 @@ jest.mock('./src/services/notifications', () => ({
 }));
 
 // Mock React Native components
-jest.mock('react-native/Libraries/Animated/NativeAnimatedHelper');
+jest.doMock(
+  'react-native/Libraries/Animated/NativeAnimatedHelper',
+  () => ({}),
+  { virtual: true }
+);
 
 // Silence console warnings in tests
 global.console = {
@@ -64,4 +68,3 @@ global.console = {
   warn: jest.fn(),
   error: jest.fn(),
 };
-

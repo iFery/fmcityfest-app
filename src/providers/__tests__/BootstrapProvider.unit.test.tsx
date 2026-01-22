@@ -10,9 +10,6 @@ import { preloadAllData } from '../../services/preloadService';
 import { hasAnyValidCache, getOldestCacheAge } from '../../utils/cacheManager';
 import { BootstrapProvider, useBootstrap } from '../BootstrapProvider';
 
-// Helper to flush all promises
-const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
-
 // Mock dependencies
 jest.mock('../../services/preloadService');
 jest.mock('../../utils/cacheManager');

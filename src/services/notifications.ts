@@ -60,7 +60,7 @@ class NotificationService {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);
         }
-      } catch (e) {
+      } catch {
         // Ignore Crashlytics errors
       }
       return null;
@@ -122,7 +122,7 @@ class NotificationService {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);
         }
-      } catch (e) {
+      } catch {
         // Ignore Crashlytics errors
       }
       return {
@@ -171,7 +171,7 @@ class NotificationService {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);
         }
-      } catch (e) {
+      } catch {
         // Ignore Crashlytics errors
       }
       return false;
@@ -197,7 +197,7 @@ class NotificationService {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);
         }
-      } catch (e) {
+      } catch {
         // Ignore Crashlytics errors
       }
       throw error;
@@ -231,7 +231,7 @@ class NotificationService {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);
         }
-      } catch (e) {
+      } catch {
         // Ignore Crashlytics errors
       }
       throw error;
@@ -258,7 +258,7 @@ class NotificationService {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);
         }
-      } catch (e) {
+      } catch {
         // Ignore Crashlytics errors
       }
     }
@@ -349,7 +349,7 @@ class NotificationService {
                   lightColor: '#FF231F7C',
                   sound: true,
                 });
-              } catch (channelError) {
+              } catch {
                 // Ignore channel errors
               }
             }
@@ -380,7 +380,7 @@ class NotificationService {
               if (isFirebaseReady()) {
                 crashlytics().recordError(error as Error);
               }
-            } catch (e) {
+            } catch {
               // Ignore Crashlytics errors
             }
           }
@@ -392,7 +392,7 @@ class NotificationService {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);
         }
-      } catch (e) {
+      } catch {
         // Ignore Crashlytics errors
       }
     }
@@ -428,7 +428,7 @@ class NotificationService {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);
         }
-      } catch (e) {
+      } catch {
         // Ignore Crashlytics errors
       }
     }
@@ -448,14 +448,12 @@ class NotificationService {
 
       // Zruš všechny existující notifikace typu 'artist'
       const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
-      let cancelledCount = 0;
       
       for (const notification of scheduledNotifications) {
         const data = notification.content.data as Record<string, unknown> | undefined;
         if (data?.type === 'artist') {
           try {
             await Notifications.cancelScheduledNotificationAsync(notification.identifier);
-            cancelledCount++;
           } catch (error) {
             console.error(`Error cancelling notification ${notification.identifier}:`, error);
           }
@@ -468,7 +466,7 @@ class NotificationService {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);
         }
-      } catch (e) {
+      } catch {
         // Ignore Crashlytics errors
       }
     }
@@ -479,7 +477,7 @@ class NotificationService {
    * Volá se při změně oblíbených nebo při aktualizaci timeline
    * Zruší všechny existující notifikace typu 'artist' a naplánuje nové pouze pro oblíbené interprety
    */
-  async updateAllArtistNotifications(favoriteArtistIds: string[], artists: Array<{ id: string; name: string }>): Promise<void> {
+  async updateAllArtistNotifications(favoriteArtistIds: string[], artists: { id: string; name: string }[]): Promise<void> {
     try {
       // Zkontroluj oprávnění
       const { status } = await Notifications.getPermissionsAsync();
@@ -504,7 +502,7 @@ class NotificationService {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);
         }
-      } catch (e) {
+      } catch {
         // Ignore Crashlytics errors
       }
     }

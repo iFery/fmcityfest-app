@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, RefreshControl, StatusBar } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useFocusEffect } from '@react-navigation/native';
@@ -16,25 +16,7 @@ export default function NotificationsScreen() {
   const [scheduledNotifications, setScheduledNotifications] = useState<Notifications.NotificationRequest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
-  const loadScheduledNotifications = async () => {
-    try {
-      const notifications = await Notifications.getAllScheduledNotificationsAsync();
-      // Seřaď notifikace podle času (nejbližší první)
-      const sortedNotifications = notifications.sort((a, b) => {
-        const dateA = getNotificationDate(a.trigger);
-        const dateB = getNotificationDate(b.trigger);
-        if (!dateA) return 1;
-        if (!dateB) return -1;
-        return dateA.getTime() - dateB.getTime();
-      });
-      setScheduledNotifications(sortedNotifications);
-    } catch (error) {
-      console.error('Error loading scheduled notifications:', error);
-      setScheduledNotifications([]);
-    }
-  };
-
-  const getNotificationDate = (trigger: Notifications.NotificationTrigger | null): Date | null => {
+  const getNotificationDate = React.useCallback((trigger: Notifications.NotificationTrigger | null): Date | null => {
     if (!trigger) {
       return null;
     }
@@ -117,7 +99,25 @@ export default function NotificationsScreen() {
       console.error('Error parsing notification date:', error, trigger);
       return null;
     }
-  };
+  }, []);
+
+  const loadScheduledNotifications = React.useCallback(async () => {
+    try {
+      const notifications = await Notifications.getAllScheduledNotificationsAsync();
+      // Seřaď notifikace podle času (nejbližší první)
+      const sortedNotifications = notifications.sort((a, b) => {
+        const dateA = getNotificationDate(a.trigger);
+        const dateB = getNotificationDate(b.trigger);
+        if (!dateA) return 1;
+        if (!dateB) return -1;
+        return dateA.getTime() - dateB.getTime();
+      });
+      setScheduledNotifications(sortedNotifications);
+    } catch (error) {
+      console.error('Error loading scheduled notifications:', error);
+      setScheduledNotifications([]);
+    }
+  }, [getNotificationDate]);
 
   const formatNotificationDate = (trigger: Notifications.NotificationTrigger | null): string => {
     if (!trigger) {
@@ -171,12 +171,12 @@ export default function NotificationsScreen() {
     setRefreshing(true);
     await loadScheduledNotifications();
     setRefreshing(false);
-  }, []);
+  }, [loadScheduledNotifications]);
 
   useFocusEffect(
     React.useCallback(() => {
       loadScheduledNotifications();
-    }, [])
+    }, [loadScheduledNotifications])
   );
 
   return (
