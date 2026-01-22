@@ -20,6 +20,7 @@ import { RootStackParamList } from '../navigation/linking';
 import { TabParamList } from '../navigation/TabNavigator';
 import { usePartners } from '../hooks/usePartners';
 import { remoteConfigService } from '../services/remoteConfig';
+import { useTheme } from '../theme/ThemeProvider';
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>,
@@ -31,6 +32,7 @@ export default function HomeScreen() {
   const { partners, loading, error } = usePartners();
   const [festivalEdition, setFestivalEdition] = useState<string>('7. ročník');
   const [festivalDate, setFestivalDate] = useState<string>('');
+  const { globalStyles } = useTheme();
 
   useEffect(() => {
     // Načtení ročníku z Remote Config
@@ -111,9 +113,13 @@ export default function HomeScreen() {
               {/* Logo a nadpis */}
               <View style={styles.logoContainer}>
                 <Image source={logoImage} style={styles.logo} resizeMode="contain" />
-                <Text style={styles.festivalEdition}>{festivalEdition}</Text>
+                <Text style={[ globalStyles.title, styles.festivalEdition]}>
+                  {festivalEdition}
+                </Text>
                 {festivalDate ? (
-                  <Text style={styles.festivalDate}>{festivalDate}</Text>
+                  <Text style={[globalStyles.heading, styles.festivalDate ]}>
+                    {festivalDate}
+                  </Text>
                 ) : null}
               </View>
 
@@ -127,14 +133,14 @@ export default function HomeScreen() {
                     activeOpacity={0.8}
                   >
                     <Ionicons name={tile.icon} size={36} color="#21AAB0" style={styles.tileIcon} />
-                    <Text style={styles.tileText}>{tile.label}</Text>
+                    <Text style={[globalStyles.heading, styles.tileText]}>{tile.label}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
 
               {/* Sekce Partneři */}
               <View style={styles.partnersSection}>
-                <Text style={styles.partnersTitle}>Generální partneři</Text>
+                <Text style={[globalStyles.heading, styles.partnersTitle]}>Generální partneři</Text>
                 {loading ? (
                   <ActivityIndicator color="#21AAB0" style={styles.loadingIndicator} />
                 ) : error ? (
@@ -177,7 +183,7 @@ export default function HomeScreen() {
                   style={styles.showAllBtn}
                   onPress={() => navigation.navigate('Partners')}
                 >
-                  <Text style={styles.showAllBtnText}>Zobrazit všechny partnery</Text>
+                  <Text style={[globalStyles.heading, styles.showAllBtnText]}>Zobrazit všechny partnery</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -215,13 +221,11 @@ const styles = StyleSheet.create({
     color: 'white',
     marginTop: 0,
     fontSize: 20,
-    fontWeight: 'bold',
   },
   festivalDate: {
     color: 'white',
     marginTop: 4,
     fontSize: 16,
-    fontWeight: 'bold',
   },
   grid: {
     flexDirection: 'row',
@@ -245,7 +249,6 @@ const styles = StyleSheet.create({
   },
   tileText: {
     color: 'white',
-    fontWeight: 'bold',
     fontSize: 16,
     marginTop: 4,
   },
@@ -254,7 +257,6 @@ const styles = StyleSheet.create({
   },
   partnersTitle: {
     color: 'white',
-    fontWeight: 'bold',
     fontSize: 18,
     marginBottom: 16,
     marginLeft: 2,
@@ -290,7 +292,6 @@ const styles = StyleSheet.create({
   },
   showAllBtnText: {
     color: 'white',
-    fontWeight: 'bold',
     fontSize: 15,
   },
   errorText: {
@@ -311,7 +312,6 @@ const styles = StyleSheet.create({
     color: '#21AAB0',
     fontSize: 12,
     textAlign: 'center',
-    fontWeight: '500',
   },
 });
 

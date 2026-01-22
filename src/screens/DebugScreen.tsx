@@ -134,6 +134,42 @@ export default function DebugScreen() {
     }
   };
 
+  const handleScheduleTestNotification = async () => {
+    try {
+      const permission = await Notifications.getPermissionsAsync();
+      let status = permission.status;
+
+      if (status !== 'granted') {
+        const request = await Notifications.requestPermissionsAsync();
+        status = request.status;
+      }
+
+      if (status !== 'granted') {
+        Alert.alert('Notifikace nejsou povolené', 'Povol prosím notifikace v nastavení zařízení.');
+        return;
+      }
+
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: 'Testovací notifikace',
+          body: 'Tato notifikace byla naplánována na 30 sekund dopředu.',
+        },
+        trigger: {
+          type: 'timeInterval',
+          seconds: 30,
+          repeats: false,
+        },
+      });
+
+      await loadScheduledNotifications();
+
+      Alert.alert('Naplánováno', 'Notifikace dorazí za 30 sekund.');
+    } catch (error) {
+      console.error('Error scheduling test notification:', error);
+      Alert.alert('Chyba', 'Notifikaci se nepodařilo naplánovat.');
+    }
+  };
+
   const formatAge = (ageMs: number | null): string => {
     if (ageMs === null) return 'Není v cache';
     const seconds = Math.floor(ageMs / 1000);
@@ -333,6 +369,9 @@ export default function DebugScreen() {
               valueColor={importantFestivalNotifications ? '#21AAB0' : '#999'}
             />
             <InfoRow label="Naplánované notifikace" value={String(scheduledNotifications.length)} />
+            <TouchableOpacity style={styles.testNotificationButton} onPress={handleScheduleTestNotification}>
+              <Text style={styles.testNotificationButtonText}>Naplánovat test notifikaci (30s)</Text>
+            </TouchableOpacity>
             {scheduledNotifications.length > 0 && (
               <View style={styles.notificationsList}>
                 {scheduledNotifications.map((notification, index) => (
@@ -505,6 +544,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#21AAB0',
     fontStyle: 'italic',
+  },
+  testNotificationButton: {
+    backgroundColor: '#21AAB0',
+    padding: 14,
+    marginTop: 8,
+    borderRadius: 4,
+    alignItems: 'center',
+  },
+  testNotificationButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
   },
   crashButton: {
     backgroundColor: '#FF4444',

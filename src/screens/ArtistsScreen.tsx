@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -25,6 +25,7 @@ import EventSelectionModal from '../components/EventSelectionModal';
 import Toast from '../components/Toast';
 import Header from '../components/Header';
 import { notificationService } from '../services';
+import { useTheme } from '../theme/ThemeProvider';
 import type { Artist } from '../types';
 
 type ArtistsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -44,31 +45,32 @@ interface TimelineEvent {
 }
 
 export default function ArtistsScreen() {
+  const { globalStyles } = useTheme();
   const navigation = useNavigation<ArtistsScreenNavigationProp>();
   const { artists, loading, error, refetch } = useArtists();
   const { toggleArtist, toggleEvent, isArtistFavorite, favoriteEvents, favoriteArtists } = useFavorites();
-  const { timelineData } = useTimeline(); // Use shared timeline context instead of local state
+  const { timelineData } = useTimeline();
   const previousTabRef = useRef<string | null>(null);
+
   const [eventModalVisible, setEventModalVisible] = useState(false);
   const [selectedArtistForModal, setSelectedArtistForModal] = useState<Artist | null>(null);
   const [selectedArtistEvents, setSelectedArtistEvents] = useState<TimelineEvent[]>([]);
 
-  // Reset stack to ArtistsMain when returning to this tab from another tab
   useFocusEffect(
     React.useCallback(() => {
       const parent = navigation.getParent();
       if (!parent) return;
-      
+
       const tabState = parent.getState();
       const currentTab = tabState.routes[tabState.index];
       const previousTabName = previousTabRef.current;
-      
+
       previousTabRef.current = currentTab?.name ?? null;
-      
+
       if (currentTab?.name === 'Artists' && previousTabName && previousTabName !== 'Artists') {
         const stackState = currentTab.state;
         const stackIndex = stackState?.index ?? 0;
-        
+
         if (stackIndex > 0) {
           requestAnimationFrame(() => {
             navigation.dispatch(
@@ -83,10 +85,11 @@ export default function ArtistsScreen() {
     }, [navigation])
   );
 
-  const { showPrompt, handleAccept, handleDismiss, onScroll: handleNotificationScroll } = useNotificationPrompt({
-    enabled: true,
-    triggerOnScroll: true,
-  });
+  const { showPrompt, handleAccept, handleDismiss, onScroll: handleNotificationScroll } =
+    useNotificationPrompt({
+      enabled: true,
+      triggerOnScroll: true,
+    });
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [toastVisible, setToastVisible] = useState(false);
@@ -101,8 +104,6 @@ export default function ArtistsScreen() {
     };
     checkPermission();
   }, []);
-
-  // Timeline data is now loaded via TimelineContext - no local loading needed
 
   const categories = useMemo(() => {
     const cats = Array.from(new Set(artists.map((artist) => artist.genre || 'Ostatní')));
@@ -123,14 +124,12 @@ export default function ArtistsScreen() {
     return filteredArtists;
   }, [filteredArtists]);
 
-  // Performance optimization: Pre-compute artist-to-events mapping once
-  // This prevents expensive filtering on every render
   const artistEventsMap = useMemo(() => {
     if (!timelineData) return new Map<string, TimelineEvent[]>();
-    
+
     const map = new Map<string, TimelineEvent[]>();
     const events = timelineData.events as TimelineEvent[];
-    
+
     events.forEach((event) => {
       if (event.interpret_id && event.start && event.id) {
         const artistId = event.interpret_id.toString();
@@ -140,20 +139,17 @@ export default function ArtistsScreen() {
         map.get(artistId)!.push(event);
       }
     });
-    
+
     return map;
   }, [timelineData]);
 
-  // Performance optimization: Pre-compute favorite status for all artists
-  // This prevents repeated lookups and filtering during render
   const artistFavoriteStatusMap = useMemo(() => {
     const map = new Map<string, boolean>();
-    
+
     filteredArtists.forEach((artist) => {
       const artistId = artist.id;
       let isFavorite = favoriteArtists.includes(artistId);
-      
-      // For artists with multiple events, check if any event is favorite
+
       if (timelineData && !isFavorite) {
         const artistEvents = artistEventsMap.get(artistId) || [];
         if (artistEvents.length > 1) {
@@ -162,10 +158,10 @@ export default function ArtistsScreen() {
           );
         }
       }
-      
+
       map.set(artistId, isFavorite);
     });
-    
+
     return map;
   }, [filteredArtists, timelineData, artistEventsMap, favoriteArtists, favoriteEvents]);
 
@@ -176,47 +172,45 @@ export default function ArtistsScreen() {
     });
   };
 
-  const handleFavoritePress = useCallback(async (artistId: string) => {
-    const artist = artists.find((a) => a.id === artistId);
-    if (!artist) return;
+  const handleFavoritePress = useCallback(
+    async (artistId: string) => {
+      const artist = artists.find((a) => a.id === artistId);
+      if (!artist) return;
 
-    // Performance optimization: Use pre-computed events map instead of filtering
-    const artistEvents = artistEventsMap.get(artistId) || [];
+      const artistEvents = artistEventsMap.get(artistId) || [];
 
-    // Pokud má interpret více koncertů, zobraz modal
-    if (artistEvents.length > 1) {
-      setSelectedArtistForModal(artist);
-      setSelectedArtistEvents(artistEvents);
-      setEventModalVisible(true);
-      return;
-    }
-
-    // Pro interprety s jedním koncertem použij původní logiku
-    const wasFavorite = isArtistFavorite(artistId);
-    toggleArtist(artistId);
-
-    const artistName = artist?.name || 'Interpret';
-
-    if (!wasFavorite) {
-      // Added to favorites
-      const { status } = await Notifications.getPermissionsAsync();
-      if (status === 'granted') {
-        setToastMessage('❤️ Přidáno do Můj program! 🔔');
-        setToastVisible(true);
-      } else {
-        // Pokud nemá povolené notifikace, zobraz modal pro žádost o povolení
-        setShowFavoritePermissionModal(true);
+      if (artistEvents.length > 1) {
+        setSelectedArtistForModal(artist);
+        setSelectedArtistEvents(artistEvents);
+        setEventModalVisible(true);
+        return;
       }
-    } else {
-      // Removed from favorites
-      setToastMessage('💔 Odebráno z Můj program.');
-      setToastVisible(true);
-    }
-  }, [artists, isArtistFavorite, toggleArtist, artistEventsMap]);
 
-  const handleEventToggle = useCallback((eventId: string) => {
-    toggleEvent(eventId);
-  }, [toggleEvent]);
+      const wasFavorite = isArtistFavorite(artistId);
+      toggleArtist(artistId);
+
+      if (!wasFavorite) {
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status === 'granted') {
+          setToastMessage('❤️ Přidáno do Můj program! 🔔');
+          setToastVisible(true);
+        } else {
+          setShowFavoritePermissionModal(true);
+        }
+      } else {
+        setToastMessage('💔 Odebráno z Můj program.');
+        setToastVisible(true);
+      }
+    },
+    [artists, isArtistFavorite, toggleArtist, artistEventsMap]
+  );
+
+  const handleEventToggle = useCallback(
+    (eventId: string) => {
+      toggleEvent(eventId);
+    },
+    [toggleEvent]
+  );
 
   const handleEventModalDismiss = useCallback(() => {
     setEventModalVisible(false);
@@ -227,11 +221,10 @@ export default function ArtistsScreen() {
   const handleFavoritePermissionAccept = useCallback(async () => {
     setShowFavoritePermissionModal(false);
     const granted = await notificationService.requestPermissions();
-    
-    // Aktualizuj stav povolení
+
     const { status } = await Notifications.getPermissionsAsync();
     setNotificationPermissionGranted(status === 'granted');
-    
+
     if (granted) {
       await notificationService.getToken();
       setToastMessage('❤️ Přidáno do Můj program! 🔔 Dostaneš upozornění 10 min před.');
@@ -247,15 +240,12 @@ export default function ArtistsScreen() {
     setToastVisible(true);
   }, []);
 
-  // Performance optimization: Memoized render function with pre-computed data
-  // Uses useCallback to prevent recreation on every render
   const renderArtistCard = useCallback(
     ({ item }: { item: Artist & { id?: string } }) => {
       if (item.id === 'spacer') {
         return <View style={[styles.card, { backgroundColor: 'transparent' }]} />;
       }
 
-      // Use pre-computed favorite status instead of filtering on every render
       const isFavorite = artistFavoriteStatusMap.get(item.id) || false;
 
       return (
@@ -272,11 +262,10 @@ export default function ArtistsScreen() {
             </View>
           )}
           <View style={styles.overlay}>
-            <Text style={styles.name} numberOfLines={2}>
+            <Text style={[globalStyles.heading, styles.name]} numberOfLines={2}>
               {item.name}
             </Text>
           </View>
-          {/* Srdíčko - pro interprety s více koncerty se zobrazí modal při kliknutí */}
           <TouchableOpacity
             style={styles.favoriteButton}
             onPress={(e) => {
@@ -294,7 +283,7 @@ export default function ArtistsScreen() {
         </TouchableOpacity>
       );
     },
-    [artistFavoriteStatusMap, handleArtistPress, handleFavoritePress]
+    [artistFavoriteStatusMap, handleArtistPress, handleFavoritePress, globalStyles.heading]
   );
 
   const renderFilters = () => (
@@ -304,44 +293,42 @@ export default function ArtistsScreen() {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.filterList}
       >
-        {categories.map((category) => (
-          <TouchableOpacity
-            key={category}
-            style={[
-              styles.filterButton,
-              selectedCategory === category || (!selectedCategory && category === 'Všichni')
-                ? styles.activeFilterButton
-                : null,
-            ]}
-            onPress={() => setSelectedCategory(category === 'Všichni' ? null : category)}
-            activeOpacity={0.7}
-          >
-            <Text
-              style={[
-                styles.filterText,
-                selectedCategory === category || (!selectedCategory && category === 'Všichni')
-                  ? styles.activeFilterText
-                  : null,
-              ]}
+        {categories.map((category) => {
+          const active =
+            selectedCategory === category || (!selectedCategory && category === 'Všichni');
+
+          return (
+            <TouchableOpacity
+              key={category}
+              style={[styles.filterButton, active && styles.activeFilterButton]}
+              onPress={() => setSelectedCategory(category === 'Všichni' ? null : category)}
+              activeOpacity={0.7}
             >
-              {category.toUpperCase()}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[
+                  globalStyles.subtitle,
+                  styles.filterText,
+                  active && styles.activeFilterText,
+                ]}
+              >
+                {category.toUpperCase()}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
       </ScrollView>
     </View>
   );
 
-  const keyExtractor = (item: Artist & { id?: string }, index: number) => {
-    return item.id?.toString() || index.toString();
-  };
+  const keyExtractor = (item: Artist & { id?: string }, index: number) =>
+    item.id?.toString() || index.toString();
 
   if (loading && artists.length === 0) {
     return (
       <View style={styles.loadingContainer}>
         <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
         <ActivityIndicator size="large" color="#EA5178" />
-        <Text style={styles.loadingText}>Načítání interpretů...</Text>
+        <Text style={[globalStyles.text, styles.loadingText]}>Načítání interpretů...</Text>
       </View>
     );
   }
@@ -351,9 +338,9 @@ export default function ArtistsScreen() {
       <View style={styles.errorContainer}>
         <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
         <Ionicons name="alert-circle-outline" size={48} color="#EA5178" />
-        <Text style={styles.errorText}>{error}</Text>
+        <Text style={[globalStyles.text, styles.errorText]}>{error}</Text>
         <TouchableOpacity style={styles.retryButton} onPress={refetch}>
-          <Text style={styles.retryButtonText}>Zkusit znovu</Text>
+          <Text style={[globalStyles.subtitle, styles.retryButtonText]}>Zkusit znovu</Text>
         </TouchableOpacity>
       </View>
     );
@@ -363,12 +350,10 @@ export default function ArtistsScreen() {
     <>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <View style={styles.container}>
-        {/* Sticky Header */}
         <View style={styles.stickyHeader}>
           <Header title="INTERPRETI" />
         </View>
 
-        {/* Scrollable Content */}
         <FlatList
           data={displayArtists}
           keyExtractor={keyExtractor}
@@ -380,17 +365,14 @@ export default function ArtistsScreen() {
           showsVerticalScrollIndicator={false}
           bounces={false}
           overScrollMode="never"
-          refreshControl={undefined}
           onScroll={handleNotificationScroll}
           scrollEventThrottle={400}
-          // Performance optimizations for smooth 60fps scrolling
-          removeClippedSubviews={true}
+          removeClippedSubviews
           maxToRenderPerBatch={10}
           windowSize={5}
           initialNumToRender={10}
-          // Note: getItemLayout not supported with numColumns > 1
-          // Items are arranged in rows, so layout calculation is complex
         />
+
         <Toast
           visible={toastVisible}
           message={toastMessage}
@@ -398,6 +380,7 @@ export default function ArtistsScreen() {
           duration={2000}
         />
       </View>
+
       <NotificationPermissionModal
         visible={showPrompt}
         onAllowNotifications={handleAccept}
@@ -459,7 +442,6 @@ const styles = StyleSheet.create({
   retryButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
   },
   filterContainer: {
     paddingVertical: 10,
@@ -483,13 +465,11 @@ const styles = StyleSheet.create({
   },
   filterText: {
     color: '#FFFFFF',
-    fontWeight: '500',
     textTransform: 'uppercase',
     fontSize: 14,
   },
   activeFilterText: {
     color: '#FFFFFF',
-    fontWeight: '600',
   },
   stickyHeader: {
     position: 'absolute',
@@ -506,7 +486,6 @@ const styles = StyleSheet.create({
   row: {
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    marginBottom: 0,
   },
   card: {
     flex: 1,
@@ -538,7 +517,6 @@ const styles = StyleSheet.create({
   },
   name: {
     color: '#FFFFFF',
-    fontWeight: '700',
     fontSize: 16,
     lineHeight: 20,
   },

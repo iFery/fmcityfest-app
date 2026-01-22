@@ -20,9 +20,9 @@ class RemoteConfigService {
     chat_url: 'https://widget-page.smartsupp.com/widget/d018080e30eda14c4d90516c6cbd849c698624c2',
     
     // Festival info
-    festival_edition: '7',
-    festival_date_from: '',
-    festival_date_to: '',
+    festival_edition: '8',
+    festival_date_from: '2026-06-19',
+    festival_date_to: '2026-06-20',
   };
 
   /**

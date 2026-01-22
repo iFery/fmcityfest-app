@@ -15,7 +15,7 @@
     "build:aab": "APP_ENV=production NODE_ENV=production npx expo prebuild --platform android && cd android && APP_ENV=production NODE_ENV=production ./gradlew bundleRelease",
     "build:ios:prod": "APP_ENV=production NODE_ENV=production npx expo prebuild --platform ios",
     "build:aab:clean": "APP_ENV=production NODE_ENV=production npx expo prebuild --clean --platform android && cd android && APP_ENV=production NODE_ENV=production ./gradlew bundleRelease",
-    "build:ios:prod:clean": "APP_ENV=production NODE_ENV=production npx expo prebuild --clean --platform ios",    
+    "build:ios:prod:clean": "APP_ENV=production NODE_ENV=production npx expo prebuild --clean --platform ios",
     "firebase:dev": "node scripts/copy-firebase-config.js dev",
     "firebase:prod": "node scripts/copy-firebase-config.js prod",
     "postinstall": "patch-package",
@@ -29,6 +29,7 @@
     "test:ci": "jest --ci --coverage --maxWorkers=2"
   },
   "dependencies": {
+    "@expo-google-fonts/raleway": "^0.4.2",
     "@expo/vector-icons": "~14.0.4",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native-community/netinfo": "^11.4.1",
@@ -44,6 +45,7 @@
     "expo-build-properties": "~0.13.3",
     "expo-constants": "~17.0.8",
     "expo-dev-client": "~5.0.20",
+    "expo-font": "~13.0.4",
     "expo-linking": "~7.0.5",
     "expo-navigation-bar": "~4.0.9",
     "expo-notifications": "~0.29.14",

@@ -32,7 +32,7 @@ function ArtistCard({ artist, onPress, showFavoriteButton = false, isFavorite = 
         )}
       </View>
       <View style={styles.content}>
-        <Text style={styles.name}>{artist.name}</Text>
+        <Text style={styles.name}>{artist.name}aa</Text>
         <Text style={styles.genre}>{artist.genre}</Text>
       </View>
       {showFavoriteButton && onFavoritePress ? (

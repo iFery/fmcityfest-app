@@ -19,6 +19,7 @@ import FAQScreen from '../screens/FAQScreen';
 import MapScreen from '../screens/MapScreen';
 import DebugScreen from '../screens/DebugScreen';
 import NotificationsScreen from '../screens/NotificationsScreen';
+import { typography } from '../theme/ThemeProvider';
 import type { RootStackParamList } from './linking';
 
 export type TabParamList = {
@@ -32,9 +33,14 @@ export type TabParamList = {
 const Tab = createBottomTabNavigator<TabParamList>();
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
+const stackScreenOptions = {
+  headerShown: false,
+  contentStyle: { backgroundColor: '#002239' },
+};
+
 function HomeStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="HomeMain">
+    <Stack.Navigator screenOptions={stackScreenOptions} initialRouteName="HomeMain">
       <Stack.Screen name="HomeMain" component={HomeScreen} />
       <Stack.Screen name="ArtistDetail" component={ArtistDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
@@ -49,7 +55,7 @@ function HomeStack() {
 
 function ProgramStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="ProgramMain">
+    <Stack.Navigator screenOptions={stackScreenOptions} initialRouteName="ProgramMain">
       <Stack.Screen name="ProgramMain" component={ProgramScreen} />
       <Stack.Screen name="ArtistDetail" component={ArtistDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
@@ -64,7 +70,7 @@ function ProgramStack() {
 
 function ArtistsStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="ArtistsMain">
+    <Stack.Navigator screenOptions={stackScreenOptions} initialRouteName="ArtistsMain">
       <Stack.Screen name="ArtistsMain" component={ArtistsScreen} />
       <Stack.Screen name="ArtistDetail" component={ArtistDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
@@ -79,7 +85,7 @@ function ArtistsStack() {
 
 function FavoritesStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="FavoritesMain">
+    <Stack.Navigator screenOptions={stackScreenOptions} initialRouteName="FavoritesMain">
       <Stack.Screen name="FavoritesMain" component={FavoritesScreen} />
       <Stack.Screen name="ArtistDetail" component={ArtistDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
@@ -94,7 +100,7 @@ function FavoritesStack() {
 
 function InfoStack() {
   return (
-    <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName="InfoMain">
+    <Stack.Navigator screenOptions={stackScreenOptions} initialRouteName="InfoMain">
       <Stack.Screen name="InfoMain" component={InfoScreen} />
       <Stack.Screen name="ArtistDetail" component={ArtistDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
@@ -131,48 +137,54 @@ export default function TabNavigator() {
   const insets = useSafeAreaInsets();
 
   return (
-    <Tab.Navigator
-      screenOptions={({ route }) => ({
-        tabBarIcon: ({ focused, color, size }) => {
-          let iconName: keyof typeof Ionicons.glyphMap;
+      <Tab.Navigator
+        sceneContainerStyle={{ backgroundColor: '#002239' }}
+        screenOptions={({ route }) => ({
+          tabBarIcon: ({ focused, color, size }) => {
+            let iconName: keyof typeof Ionicons.glyphMap;
 
-          if (route.name === 'Home') {
-            iconName = focused ? 'home' : 'home-outline';
-          } else if (route.name === 'Program') {
-            iconName = focused ? 'calendar' : 'calendar-outline';
-          } else if (route.name === 'Artists') {
-            iconName = focused ? 'people' : 'people-outline';
-          } else if (route.name === 'Favorites') {
-            iconName = focused ? 'heart' : 'heart-outline';
-          } else if (route.name === 'Info') {
-            iconName = focused ? 'menu' : 'menu-outline';
-          } else {
-            iconName = 'help-outline';
-          }
+            if (route.name === 'Home') {
+              iconName = focused ? 'home' : 'home-outline';
+            } else if (route.name === 'Program') {
+              iconName = focused ? 'calendar' : 'calendar-outline';
+            } else if (route.name === 'Artists') {
+              iconName = focused ? 'people' : 'people-outline';
+            } else if (route.name === 'Favorites') {
+              iconName = focused ? 'heart' : 'heart-outline';
+            } else if (route.name === 'Info') {
+              iconName = focused ? 'menu' : 'menu-outline';
+            } else {
+              iconName = 'help-outline';
+            }
 
-          return <Ionicons name={iconName} size={size} color={color} />;
-        },
-        tabBarActiveTintColor: '#EA5178',
-        tabBarInactiveTintColor: 'gray',
-        tabBarStyle: {
-          backgroundColor: '#002239',
-          borderTopColor: '#0A3652',
-          borderTopWidth: 1.5,
-          // For iOS: React Navigation automatically handles safe area insets
-          // We only set minimal styling, React Navigation will add safe area padding automatically
-          ...(Platform.OS === 'ios' && {
-            paddingTop: 8,
-          }),
-          // For Android: We need to manually add padding and height for system navigation bar
-          ...(Platform.OS === 'android' && {
-            height: 60 + Math.max(insets?.bottom || 0, 0),
-            paddingBottom: Math.max(insets?.bottom || 0, 8),
-            paddingTop: 8,
-          }),
-        },
-        headerShown: false,
-      })}
-    >
+            return <Ionicons name={iconName} size={size} color={color} />;
+          },
+
+          tabBarActiveTintColor: '#EA5178',
+          tabBarInactiveTintColor: 'gray',
+
+          tabBarLabelStyle: {
+            fontFamily: typography.fontFamily.medium,
+            fontSize: 12,
+          },
+
+          tabBarStyle: {
+            backgroundColor: '#002239',
+            borderTopColor: '#0A3652',
+            borderTopWidth: 1.5,
+            ...(Platform.OS === 'ios' && {
+              paddingTop: 8,
+            }),
+            ...(Platform.OS === 'android' && {
+              height: 60 + Math.max(insets?.bottom || 0, 0),
+              paddingBottom: Math.max(insets?.bottom || 0, 8),
+              paddingTop: 8,
+            }),
+          },
+
+          headerShown: false,
+        })}
+      >
       <Tab.Screen 
         name="Home" 
         component={HomeStack}

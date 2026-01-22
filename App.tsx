@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, StyleSheet, StatusBar, Animated, Image, Easing, Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { useFonts } from 'expo-font';
+import {
+  Raleway_400Regular,
+  Raleway_500Medium,
+  Raleway_600SemiBold,
+  Raleway_700Bold,
+} from '@expo-google-fonts/raleway';
 import { BootstrapProvider, useBootstrap } from './src/providers/BootstrapProvider';
+import { ThemeProvider } from './src/theme/ThemeProvider'
 import { TimelineProvider } from './src/contexts/TimelineContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { OfflineBlockedScreen } from './src/screens/OfflineBlockedScreen';
@@ -207,18 +215,56 @@ export default function App() {
       NavigationBar.setButtonStyleAsync('light');
     }
   }, []);
+
   return (
     <SafeAreaProvider>
       <BootstrapProvider>
-        <AppContentWithTimeline />
+        <AppContentWithFonts />
       </BootstrapProvider>
     </SafeAreaProvider>
   );
 }
 
+function AppContentWithFonts() {
+  const [fontsLoaded, fontError] = useFonts({
+    'Raleway-Regular': Raleway_400Regular,
+    'Raleway-Medium': Raleway_500Medium,
+    'Raleway-SemiBold': Raleway_600SemiBold,
+    'Raleway-Bold': Raleway_700Bold,
+  });
+
+  const [fontsTimeout, setFontsTimeout] = useState(false);
+
+  useEffect(() => {
+    if (fontError) {
+      console.error('❌ Font loading error:', fontError);
+      setFontsTimeout(true);
+    }
+
+    const timeout = setTimeout(() => {
+      if (!fontsLoaded && !fontError) {
+        setFontsTimeout(true);
+      }
+    }, 2000);
+
+    return () => clearTimeout(timeout);
+  }, [fontsLoaded, fontError]);
+
+  // Dokud se fonty nenačtou (a neproběhne timeout), drž loading
+  if (!fontsLoaded && !fontsTimeout && !fontError) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <ThemeProvider>
+      <AppContentWithTimeline />
+    </ThemeProvider>
+  );
+}
+
 function AppContentWithTimeline() {
   const { timelineData } = useBootstrap();
-  
+
   return (
     <TimelineProvider initialData={timelineData}>
       <AppContent />

@@ -192,7 +192,7 @@ module.exports = ({ config }) => {
         },
         package: 'com.fmcityfest.app',
         googleServicesFile: androidGoogleServicesFile,
-        versionCode: 15, // Increment this for each release to Google Play
+        versionCode: 16, // Increment this for each release to Google Play
         permissions: [
           'com.google.android.gms.permission.AD_ID', // Required for advertising ID usage (Android 13+)
         ],
@@ -202,6 +202,8 @@ module.exports = ({ config }) => {
       },
       plugins: [
         'expo-asset',
+        'expo-font',
+
         [
           'expo-build-properties',
           {

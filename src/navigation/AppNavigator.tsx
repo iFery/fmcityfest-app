@@ -1,9 +1,18 @@
 import React, { useEffect } from 'react';
-import { NavigationContainer, NavigationContainerRef, LinkingOptions } from '@react-navigation/native';
+import { NavigationContainer, NavigationContainerRef, LinkingOptions, DefaultTheme } from '@react-navigation/native';
 import TabNavigator from './TabNavigator';
 import { linking, type RootStackParamList } from './linking';
 import { navigationRef } from './navigationRef';
 import { navigationQueue } from './navigationQueue';
+
+const navTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: '#002239',
+    card: '#002239',
+  },
+};
 
 export type { RootStackParamList };
 
@@ -53,6 +62,7 @@ export default function AppNavigator() {
     <NavigationContainer 
       ref={navigationRef} 
       linking={linking as LinkingOptions<RootStackParamList>}
+      theme={navTheme}
       onReady={handleReady}
     >
       <TabNavigator />

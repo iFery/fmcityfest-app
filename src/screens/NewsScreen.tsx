@@ -21,10 +21,12 @@ import { RootStackParamList } from '../navigation/linking';
 import Header from '../components/Header';
 import { useNews } from '../hooks/useNews';
 import type { News } from '../types';
+import { useTheme } from '../theme/ThemeProvider';
 
 type NewsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function NewsScreen() {
+  const { globalStyles } = useTheme();
   const navigation = useNavigation<NewsScreenNavigationProp>();
   const { news, loading, error } = useNews();
 
@@ -47,7 +49,6 @@ export default function NewsScreen() {
     }
   }, []);
 
-  // Memoized render function for performance
   const renderNewsItem = useCallback(
     ({ item }: { item: News }) => (
       <TouchableOpacity
@@ -63,37 +64,36 @@ export default function NewsScreen() {
           />
         )}
         <View style={styles.newsContent}>
-          <Text style={styles.newsTitle}>{item.title}</Text>
-          <Text style={styles.newsDate}>{formatDate(item.date)}</Text>
+          <Text style={[globalStyles.heading, styles.newsTitle, ]}>{item.title}</Text>
+          <Text style={[globalStyles.subtitle, styles.newsDate, ]}>
+            {formatDate(item.date)}
+          </Text>
         </View>
       </TouchableOpacity>
     ),
-    [handleNewsPress, formatDate]
+    [handleNewsPress, formatDate, globalStyles]
   );
 
   const keyExtractor = useCallback((item: News) => item.id, []);
 
-  // Memoized list header component
-  const listHeaderComponent = useMemo(
-    () => <Header title="NOVINKY" />,
-    []
-  );
+  const listHeaderComponent = useMemo(() => <Header title="NOVINKY" />, []);
 
-  // Memoized empty/error component
   const listEmptyComponent = useMemo(() => {
     if (error) {
       return (
         <View style={styles.emptyContainer}>
-          <Text style={styles.errorText}>{error}</Text>
+          <Text style={[globalStyles.text, styles.errorText]}>{error}</Text>
         </View>
       );
     }
     return (
       <View style={styles.emptyContainer}>
-        <Text style={styles.errorText}>Žádné novinky nejsou k dispozici</Text>
+        <Text style={[globalStyles.text, styles.errorText]}>
+          Žádné novinky nejsou k dispozici
+        </Text>
       </View>
     );
-  }, [error]);
+  }, [error, globalStyles]);
 
   if (loading) {
     return (
@@ -115,21 +115,18 @@ export default function NewsScreen() {
           ListHeaderComponent={listHeaderComponent}
           ListEmptyComponent={listEmptyComponent}
           contentContainerStyle={styles.content}
-          // Performance optimizations for smooth 60fps scrolling
-          removeClippedSubviews={true}
+          removeClippedSubviews
           maxToRenderPerBatch={10}
           windowSize={5}
           initialNumToRender={10}
-          // Maintain existing scroll behavior
           bounces={false}
           overScrollMode="never"
           showsVerticalScrollIndicator={false}
         />
 
-        {/* Floating back button */}
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={20} color="white" style={styles.backIcon} />
-          <Text style={styles.backButtonText}>Zpět</Text>
+          <Text style={[globalStyles.heading, styles.backButtonText, ]}>Zpět</Text>
         </TouchableOpacity>
       </View>
     </>
@@ -172,19 +169,15 @@ const styles = StyleSheet.create({
   },
   newsTitle: {
     color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
     marginBottom: 8,
   },
   newsDate: {
     color: '#21AAB0',
-    fontSize: 14,
   },
   errorText: {
     color: 'white',
     textAlign: 'center',
     marginVertical: 20,
-    fontSize: 16,
   },
   backButton: {
     position: 'absolute',
@@ -207,9 +200,6 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     color: 'white',
-    fontWeight: '600',
     fontSize: 14,
   },
 });
-
-

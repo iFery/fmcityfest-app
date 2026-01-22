@@ -23,6 +23,7 @@ import { useEvents } from '../hooks/useEvents';
 import { useNews } from '../hooks/useNews';
 import { usePartners } from '../hooks/usePartners';
 import { notificationService } from '../services/notifications';
+import { useTheme } from '../theme/ThemeProvider';
 
 const HEADER_HEIGHT = 130;
 
@@ -34,7 +35,9 @@ export default function SettingsScreen() {
     setFavoriteArtistsNotifications,
     setImportantFestivalNotifications,
   } = useNotificationPreferencesStore();
-  
+
+  const { globalStyles } = useTheme();
+
   const { refetch: refetchArtists } = useArtists();
   const { refetch: refetchEvents } = useEvents();
   const { refetch: refetchNews } = useNews();
@@ -47,7 +50,6 @@ export default function SettingsScreen() {
     checkNotificationPermission();
   }, []);
 
-  // Zkontroluj oprávnění při návratu na obrazovku (např. po návratu z nastavení)
   useFocusEffect(
     React.useCallback(() => {
       checkNotificationPermission();
@@ -68,16 +70,13 @@ export default function SettingsScreen() {
 
   const handleOpenSystemSettings = async () => {
     try {
-      // Nejprve zkus požádat o oprávnění (funguje hlavně na Androidu)
       const { status } = await Notifications.requestPermissionsAsync();
-      
+
       if (status === 'granted') {
-        // Oprávnění bylo uděleno
         setNotificationPermissionStatus('granted');
         return;
       }
-      
-      // Pokud oprávnění nebylo uděleno, otevři systémová nastavení
+
       if (Platform.OS === 'ios') {
         Linking.openURL('app-settings:');
       } else {
@@ -85,7 +84,6 @@ export default function SettingsScreen() {
       }
     } catch (error) {
       console.error('Error requesting permissions:', error);
-      // Pokud selže požadavek, otevři systémová nastavení
       if (Platform.OS === 'ios') {
         Linking.openURL('app-settings:');
       } else {
@@ -120,21 +118,14 @@ export default function SettingsScreen() {
 
   const handleToggleFavoriteArtistsNotifications = async (enabled: boolean) => {
     setFavoriteArtistsNotifications(enabled);
-    
-    // Zkontroluj oprávnění
+
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') {
       return;
     }
 
-    if (enabled) {
-      // Notifikace se automaticky naplánují přes useEffect v useFavorites
-      // Můžeme zobrazit potvrzení
-      console.log('Artist notifications enabled - will be scheduled for favorite artists');
-    } else {
-      // Zruš všechny notifikace pro interprety
+    if (!enabled) {
       await notificationService.cancelAllArtistNotifications();
-      console.log('Artist notifications disabled - all artist notifications cancelled');
     }
   };
 
@@ -151,47 +142,49 @@ export default function SettingsScreen() {
           contentContainerStyle={styles.scrollContent}
           bounces={false}
           overScrollMode="never"
-          refreshControl={undefined}
         >
           {/* Notifications Section */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="notifications-outline" size={24} color="#EA5178" />
-              <Text style={styles.sectionTitle}>Notifikace</Text>
+              <Text style={[styles.sectionTitle, globalStyles.heading]}>
+                Notifikace
+              </Text>
             </View>
 
-            {/* Notification Status Row */}
             <View style={styles.statusRow}>
               <View style={styles.statusContent}>
                 <Text style={styles.statusIcon}>
                   {isNotificationEnabled ? '✅' : '🔕'}
                 </Text>
                 <View style={styles.statusTextContainer}>
-                  <Text style={styles.statusText}>
+                  <Text style={[globalStyles.text, styles.statusText]}>
                     {isNotificationEnabled
                       ? 'Notifikace jsou povolené'
                       : 'Notifikace jsou vypnuté'}
                   </Text>
                 </View>
               </View>
+
               {!isNotificationEnabled && (
                 <TouchableOpacity
                   style={styles.settingsButton}
                   onPress={handleOpenSystemSettings}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.settingsButtonText}>Otevřít nastavení</Text>
+                  <Text style={[globalStyles.heading, styles.settingsButtonText]}>
+                    Otevřít nastavení
+                  </Text>
                 </TouchableOpacity>
               )}
             </View>
 
-            {/* Favorite Artists Notifications Toggle */}
             <View style={styles.settingRow}>
               <View style={styles.settingContent}>
-                <Text style={styles.settingTitle}>
+                <Text style={[globalStyles.heading, styles.settingTitle]}>
                   Upozornění na oblíbené interprety
                 </Text>
-                <Text style={styles.settingDescription}>
+                <Text style={[globalStyles.text, styles.settingDescription]}>
                   Upozornění 10 minut před začátkem koncertu
                 </Text>
               </View>
@@ -205,13 +198,12 @@ export default function SettingsScreen() {
               />
             </View>
 
-            {/* Important Festival Notifications Toggle */}
             <View style={styles.settingRow}>
               <View style={styles.settingContent}>
-                <Text style={styles.settingTitle}>
+                <Text style={[globalStyles.heading, styles.settingTitle]}>
                   Důležitá festivalová upozornění
                 </Text>
-                <Text style={styles.settingDescription}>
+                <Text style={[globalStyles.text, styles.settingDescription]}>
                   Změny programu, organizační info a novinky
                 </Text>
               </View>
@@ -226,11 +218,13 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          {/* Můj program Section */}
+          {/* Můj program */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="heart-outline" size={24} color="#EA5178" />
-              <Text style={styles.sectionTitle}>Můj program</Text>
+              <Text style={[globalStyles.heading, styles.sectionTitle ]}>
+                Můj program
+              </Text>
             </View>
 
             <TouchableOpacity
@@ -239,8 +233,10 @@ export default function SettingsScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Vymazat Můj program</Text>
-                <Text style={styles.actionDescription}>
+                <Text style={[globalStyles.heading, styles.actionTitle]}>
+                  Vymazat Můj program
+                </Text>
+                <Text style={[globalStyles.text, styles.actionDescription]}>
                   Odebere všechny uložené interprety
                 </Text>
               </View>
@@ -248,11 +244,13 @@ export default function SettingsScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* Festival & data Section */}
+          {/* Festival & data */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="musical-notes-outline" size={24} color="#EA5178" />
-              <Text style={styles.sectionTitle}>Festival & data</Text>
+              <Text style={[styles.sectionTitle, globalStyles.heading]}>
+                Festival & data
+              </Text>
             </View>
 
             <TouchableOpacity
@@ -261,8 +259,10 @@ export default function SettingsScreen() {
               activeOpacity={0.7}
             >
               <View style={styles.actionContent}>
-                <Text style={styles.actionTitle}>Obnovit data</Text>
-                <Text style={styles.actionDescription}>
+                <Text style={[globalStyles.heading, styles.actionTitle]}>
+                  Obnovit data
+                </Text>
+                <Text style={[globalStyles.subtitle, styles.actionDescription]}>
                   Načte nejnovější informace o programu a interpretech
                 </Text>
               </View>
@@ -271,33 +271,40 @@ export default function SettingsScreen() {
           </View>
         </ScrollView>
 
-        {/* Clear Favorites Confirmation Modal */}
         <Modal
           visible={showClearModal}
-          transparent={true}
+          transparent
           animationType="fade"
           onRequestClose={() => setShowClearModal(false)}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Vymazat Můj program?</Text>
-              <Text style={styles.modalMessage}>
+              <Text style={[globalStyles.heading, styles.modalTitle]}>
+                Vymazat Můj program?
+              </Text>
+              <Text style={[globalStyles.text, styles.modalMessage]}>
                 Opravdu chceš odebrat všechny uložené interprety? Tuto akci nelze vrátit zpět.
               </Text>
+
               <View style={styles.modalButtons}>
                 <TouchableOpacity
                   style={[styles.modalButton, styles.modalButtonCancel]}
                   onPress={() => setShowClearModal(false)}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.modalButtonCancelText}>Zrušit</Text>
+                  <Text style={[globalStyles.heading, styles.modalButtonCancelText]}>
+                    Zrušit
+                  </Text>
                 </TouchableOpacity>
+
                 <TouchableOpacity
                   style={[styles.modalButton, styles.modalButtonConfirm]}
                   onPress={confirmClearFavorites}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.modalButtonConfirmText}>Vymazat</Text>
+                  <Text style={[globalStyles.heading, styles.modalButtonConfirmText]}>
+                    Vymazat
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -341,9 +348,6 @@ const styles = StyleSheet.create({
     borderBottomColor: '#EA5178',
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
     marginLeft: 8,
   },
   statusRow: {
@@ -366,22 +370,14 @@ const styles = StyleSheet.create({
   statusTextContainer: {
     flex: 1,
   },
-  statusText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
+  statusText: {},
   settingsButton: {
     backgroundColor: '#EA5178',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 6,
   },
-  settingsButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  settingsButtonText: {},
   settingRow: {
     backgroundColor: '#0A3652',
     padding: 16,
@@ -395,15 +391,9 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   settingTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
     marginBottom: 4,
   },
-  settingDescription: {
-    fontSize: 14,
-    color: '#999',
-  },
+  settingDescription: {},
   actionRow: {
     backgroundColor: '#0A3652',
     padding: 16,
@@ -417,15 +407,9 @@ const styles = StyleSheet.create({
     marginRight: 16,
   },
   actionTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#FFFFFF',
     marginBottom: 4,
   },
-  actionDescription: {
-    fontSize: 14,
-    color: '#999',
-  },
+  actionDescription: {},
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
@@ -441,16 +425,10 @@ const styles = StyleSheet.create({
     maxWidth: 400,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#FFFFFF',
     marginBottom: 12,
   },
   modalMessage: {
-    fontSize: 16,
-    color: '#CCC',
     marginBottom: 24,
-    lineHeight: 22,
   },
   modalButtons: {
     flexDirection: 'row',
@@ -470,14 +448,6 @@ const styles = StyleSheet.create({
   modalButtonConfirm: {
     backgroundColor: '#EA5178',
   },
-  modalButtonCancelText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  modalButtonConfirmText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
+  modalButtonCancelText: {},
+  modalButtonConfirmText: {},
 });

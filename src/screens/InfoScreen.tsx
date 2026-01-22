@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/linking';
 import { Ionicons } from '@expo/vector-icons';
 import Header from '../components/Header';
+import { useTheme } from '../theme/ThemeProvider';
 
 type InfoScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -20,6 +21,7 @@ const HEADER_HEIGHT = 130;
 
 export default function InfoScreen() {
   const navigation = useNavigation<InfoScreenNavigationProp>();
+  const { globalStyles } = useTheme();
 
   const menuItems: InfoMenuItem[] = [
     {
@@ -27,7 +29,7 @@ export default function InfoScreen() {
       title: 'Časté dotazy',
       icon: 'help-circle',
       onPress: () => navigation.navigate('FAQ'),
-      color: '#EA5178',
+      color: '#21AAB0',
     },
     {
       id: 'map',
@@ -48,7 +50,7 @@ export default function InfoScreen() {
       title: 'Novinky',
       icon: 'newspaper',
       onPress: () => navigation.navigate('News'),
-      color: '#EA5178',
+      color: '#21AAB0',
     },
     {
       id: 'notifications',
@@ -62,7 +64,7 @@ export default function InfoScreen() {
       title: 'Nastavení',
       icon: 'settings',
       onPress: () => navigation.navigate('Settings'),
-      color: '#666',
+      color: '#21AAB0',
     },
     {
       id: 'debug',
@@ -94,12 +96,10 @@ export default function InfoScreen() {
                 onPress={item.onPress}
                 activeOpacity={0.7}
               >
-                <Ionicons 
-                  name={item.icon} 
-                  size={24} 
-                  color="#21AAB0" 
-                />
-                <Text style={styles.menuItemTitle}>{item.title}</Text>
+                <Ionicons name={item.icon} size={24} color={item.color || '#21AAB0'} />
+                <Text style={[globalStyles.heading, styles.menuItemTitle]}>
+                  {item.title}
+                </Text>
                 <View style={styles.spacer} />
                 <Ionicons name="chevron-forward" size={24} color="#999" />
               </TouchableOpacity>
@@ -139,8 +139,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   menuItemTitle: {
-    fontSize: 16,
-    fontWeight: '600',
     color: '#FFFFFF',
     marginLeft: 16,
   },

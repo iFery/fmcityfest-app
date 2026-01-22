@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, TouchableOpacity } from 'react-native';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface ToastProps {
   visible: boolean;
@@ -13,6 +14,7 @@ interface ToastProps {
 }
 
 export default function Toast({ visible, message, onDismiss, duration = 2000, actionButton }: ToastProps) {
+  const { globalStyles } = useTheme();
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
 
@@ -67,10 +69,10 @@ export default function Toast({ visible, message, onDismiss, duration = 2000, ac
           },
         ]}
       >
-        <Text style={styles.message}>{message}</Text>
+        <Text style={[globalStyles.subtitle, styles.message]}>{message}</Text>
         {actionButton && (
           <TouchableOpacity style={styles.actionButton} onPress={actionButton.onPress}>
-            <Text style={styles.actionButtonText}>{actionButton.label}</Text>
+            <Text style={[globalStyles.subtitle, styles.actionButtonText]}>{actionButton.label}</Text>
           </TouchableOpacity>
         )}
       </Animated.View>
@@ -107,7 +109,6 @@ const styles = StyleSheet.create({
   message: {
     color: '#FFFFFF',
     fontSize: 14,
-    fontWeight: '500',
     flex: 1,
   },
   actionButton: {
@@ -120,7 +121,6 @@ const styles = StyleSheet.create({
   actionButtonText: {
     color: '#FFFFFF',
     fontSize: 13,
-    fontWeight: '600',
   },
 });
 

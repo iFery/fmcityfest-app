@@ -22,14 +22,15 @@ import { RootStackParamList } from '../navigation/linking';
 import Header from '../components/Header';
 import { usePartners } from '../hooks/usePartners';
 import type { Partner } from '../types';
+import { useTheme } from '../theme/ThemeProvider';
 
 type PartnersScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function PartnersScreen() {
+  const { globalStyles } = useTheme();
   const navigation = useNavigation<PartnersScreenNavigationProp>();
   const { partners, loading, error } = usePartners();
 
-  // Group partners by category
   const groupedPartners = useMemo(() => {
     return partners.reduce((acc, partner) => {
       const category = partner.category || 'Ostatní';
@@ -41,7 +42,6 @@ export default function PartnersScreen() {
     }, {} as Record<string, Partner[]>);
   }, [partners]);
 
-  // Preserve category order
   const sortedCategories = useMemo(() => {
     const order = ['Generální partneři', 'Partneři', 'Mediální partneři'];
     return order.filter((category) => groupedPartners[category]?.length > 0);
@@ -73,14 +73,14 @@ export default function PartnersScreen() {
           <Header title="PARTNEŘI" />
           <View style={styles.content}>
             {error ? (
-              <Text style={styles.errorText}>{error}</Text>
+              <Text style={[globalStyles.text, styles.errorText]}>{error}</Text>
             ) : partners.length === 0 ? (
-              <Text style={styles.errorText}>Nebyli nalezeni žádní partneři</Text>
+              <Text style={[globalStyles.text, styles.errorText]}>Nebyli nalezeni žádní partneři</Text>
             ) : (
               sortedCategories.map((category) => (
                 <View key={category} style={styles.categorySection}>
                   <View style={styles.categoryHeader}>
-                    <Text style={styles.categoryTitle}>{category}</Text>
+                    <Text style={[globalStyles.heading, styles.categoryTitle]}>{category}</Text>
                   </View>
                   <View style={styles.partnersGrid}>
                     {groupedPartners[category].map((partner) => (
@@ -95,9 +95,6 @@ export default function PartnersScreen() {
                             source={{ uri: partner.logo_url }}
                             style={styles.partnerLogo}
                             resizeMode="contain"
-                            onError={(e) =>
-                              console.error('Chyba při načítání loga:', partner.name, e.nativeEvent.error)
-                            }
                           />
                         ) : (
                           <View style={styles.placeholderContainer}>
@@ -113,10 +110,9 @@ export default function PartnersScreen() {
           </View>
         </ScrollView>
 
-        {/* Floating back button */}
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={20} color="white" style={styles.backIcon} />
-          <Text style={styles.backButtonText}>Zpět</Text>
+          <Text style={[globalStyles.heading, styles.backButtonText]}>Zpět</Text>
         </TouchableOpacity>
       </View>
     </>
@@ -143,21 +139,15 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   categoryHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingBottom: 10,
-    marginBottom: 0,
+    paddingBottom: 8,
   },
   categoryTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
     color: 'white',
-    marginBottom: 10,
   },
   partnersGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginHorizontal: 0,
   },
   partnerBox: {
     width: '50%',
@@ -167,7 +157,6 @@ const styles = StyleSheet.create({
     borderColor: '#224259',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 0,
   },
   partnerLogo: {
     width: '90%',
@@ -218,5 +207,3 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
-
-

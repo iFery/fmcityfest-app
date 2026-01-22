@@ -24,6 +24,7 @@ import { useEvents } from '../hooks/useEvents';
 import { useFavorites } from '../hooks/useFavorites';
 import { useTimeline } from '../contexts/TimelineContext';
 import Header from '../components/Header';
+import { useTheme } from '../theme/ThemeProvider';
 import type { Stage } from '../types';
 
 dayjs.locale('cs');
@@ -48,27 +49,27 @@ interface TimelineEvent {
 }
 
 export default function ProgramScreen() {
+  const { globalStyles } = useTheme();
   const navigation = useNavigation<ProgramScreenNavigationProp>();
   const { events, loading, error } = useEvents();
   const { favoriteEvents } = useFavorites();
   const previousTabRef = useRef<string | null>(null);
-  
-  // Reset stack to ProgramMain when returning to this tab from another tab
+
   useFocusEffect(
     React.useCallback(() => {
       const parent = navigation.getParent();
       if (!parent) return;
-      
+
       const tabState = parent.getState();
       const currentTab = tabState.routes[tabState.index];
       const previousTabName = previousTabRef.current;
-      
+
       previousTabRef.current = currentTab?.name ?? null;
-      
+
       if (currentTab?.name === 'Program' && previousTabName && previousTabName !== 'Program') {
         const stackState = currentTab.state;
         const stackIndex = stackState?.index ?? 0;
-        
+
         if (stackIndex > 0) {
           requestAnimationFrame(() => {
             navigation.dispatch(
@@ -82,119 +83,80 @@ export default function ProgramScreen() {
       }
     }, [navigation])
   );
-  
-  // Notification prompt
-  const { showPrompt, handleAccept, handleDismiss, onScroll: handleNotificationScroll } = useNotificationPrompt({
-    enabled: true,
-    triggerOnScroll: true,
-  });
 
-  // Use shared timeline context instead of loading locally
+  const { showPrompt, handleAccept, handleDismiss, onScroll: handleNotificationScroll } =
+    useNotificationPrompt({
+      enabled: true,
+      triggerOnScroll: true,
+    });
+
   const { timelineData, loading: timelineLoading, refetch: refetchTimeline } = useTimeline();
   const [day, setDay] = useState<'dayOne' | 'dayTwo'>('dayOne');
 
-  // Reload timeline data when screen is focused (e.g., after data refresh in settings)
   useFocusEffect(
     React.useCallback(() => {
       refetchTimeline();
     }, [refetchTimeline])
   );
 
-  // Set default day based on current date
   useEffect(() => {
     if (!timelineData) return;
 
     const now = dayjs();
     const today = now.format('YYYY-MM-DD');
-    
-    const dayOneStart = dayjs(timelineData.config.dayOne.start);
-    const dayOneStartDate = dayOneStart.format('YYYY-MM-DD');
-    const dayOneEnd = dayjs(timelineData.config.dayOne.end);
-    const dayOneEndDate = dayOneEnd.format('YYYY-MM-DD');
-    
-    const dayTwoStart = dayjs(timelineData.config.dayTwo.start);
-    const dayTwoStartDate = dayTwoStart.format('YYYY-MM-DD');
-    const dayTwoEnd = dayjs(timelineData.config.dayTwo.end);
-    const dayTwoEndDate = dayTwoEnd.format('YYYY-MM-DD');
 
-    // Check if today is within dayTwo range
-    const isInDayTwo = 
-      (today >= dayTwoStartDate && today <= dayTwoEndDate);
-    
-    // Check if today is within dayOne range
-    const isInDayOne = 
-      (today >= dayOneStartDate && today <= dayOneEndDate);
+    const dayOneStartDate = dayjs(timelineData.config.dayOne.start).format('YYYY-MM-DD');
+    const dayOneEndDate = dayjs(timelineData.config.dayOne.end).format('YYYY-MM-DD');
 
-    // Prioritize dayTwo if both match (shouldn't happen, but just in case)
-    if (isInDayTwo) {
+    const dayTwoStartDate = dayjs(timelineData.config.dayTwo.start).format('YYYY-MM-DD');
+    const dayTwoEndDate = dayjs(timelineData.config.dayTwo.end).format('YYYY-MM-DD');
+
+    if (today >= dayTwoStartDate && today <= dayTwoEndDate) {
       setDay('dayTwo');
-    } else if (isInDayOne) {
+    } else if (today >= dayOneStartDate && today <= dayOneEndDate) {
       setDay('dayOne');
     }
-    // Otherwise keep default (dayOne) - already set in useState
   }, [timelineData]);
 
-  // Transform events to timeline format
   const timelineEvents = useMemo((): TimelineEvent[] => {
     if (!timelineData) return [];
 
     return timelineData.events.map((event) => {
-      // API returns start and end directly in ISO format
-      // If not available, try to construct from time/date fields
       let start = (event as any).start || '';
       let end = (event as any).end || '';
 
-      // Fallback: try to construct from time/date if start/end not available
       if (!start) {
         const eventDate = (event as any).date || timelineData.config[day].start;
         const timeStr = event.time || '';
-        
+
         if (timeStr && eventDate) {
-          try {
-            const datePart = dayjs(eventDate).format('YYYY-MM-DD');
-            const [hours, minutes] = timeStr.split(':');
-            if (hours && minutes) {
-              start = dayjs(`${datePart} ${hours}:${minutes}`).toISOString();
-              end = dayjs(start).add(1, 'hour').toISOString();
-            }
-          } catch (e) {
-            console.warn('Could not parse event time:', e);
+          const datePart = dayjs(eventDate).format('YYYY-MM-DD');
+          const [hours, minutes] = timeStr.split(':');
+          if (hours && minutes) {
+            start = dayjs(`${datePart} ${hours}:${minutes}`).toISOString();
+            end = dayjs(start).add(1, 'hour').toISOString();
           }
         } else {
           start = eventDate || '';
         }
       }
 
-      // Ensure ISO format
-      if (start && !start.includes('T')) {
-        try {
-          start = dayjs(start).toISOString();
-        } catch (e) {
-          console.warn('Could not parse start date:', start);
-        }
-      }
-      if (end && !end.includes('T')) {
-        try {
-          end = dayjs(end).toISOString();
-        } catch (e) {
-          console.warn('Could not parse end date:', end);
-        }
-      }
+      if (start && !start.includes('T')) start = dayjs(start).toISOString();
+      if (end && !end.includes('T')) end = dayjs(end).toISOString();
 
       return {
         ...event,
         id: event.id || (event as any).interpret_id?.toString() || '',
         name: event.name || event.artist || '',
         artist: event.artist,
-        start: start,
-        end: end,
+        start,
+        end,
         stage: event.stage,
         interpret_id: (event as any).interpret_id || event.id || '',
       };
     });
   }, [timelineData, day]);
 
-  // Filter events for current day
   const dayEvents = useMemo(() => {
     if (!timelineData || timelineEvents.length === 0) return [];
 
@@ -208,7 +170,6 @@ export default function ProgramScreen() {
     });
   }, [timelineData, day, timelineEvents]);
 
-  // Generate timeline hours
   const timeline = useMemo(() => {
     if (!timelineData) return [];
 
@@ -226,34 +187,21 @@ export default function ProgramScreen() {
   }, [timelineData, day]);
 
   const handleEventPress = (event: TimelineEvent) => {
-    // All events should have interpret_id, navigate to ArtistDetail
     if (event.interpret_id) {
       navigation.navigate('ArtistDetail', {
         artistId: event.interpret_id.toString(),
         artistName: event.name || event.artist || 'Interpret',
       });
-    } else {
-      // Fallback: if no interpret_id, still try to navigate to artist using event.id
-      // This should not happen in practice, but provides graceful fallback
-      const artistId = event.id || '';
-      if (artistId) {
-        navigation.navigate('ArtistDetail', {
-          artistId: artistId,
-          artistName: event.name || event.artist || 'Interpret',
-        });
-      }
     }
   };
 
-  // Only show loading if we don't have timeline data yet
-  // Timeline data should be preloaded, so this should rarely happen
   if ((loading || timelineLoading) && !timelineData) {
     return (
       <>
         <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color="#21AAB0" />
-          <Text style={styles.loadingText}>Načítám program...</Text>
+          <Text style={[styles.loadingText, globalStyles.text]}>Načítám program...</Text>
         </View>
       </>
     );
@@ -268,7 +216,7 @@ export default function ProgramScreen() {
             <Header title="PROGRAM" />
           </View>
           <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>
+            <Text style={[styles.errorText, globalStyles.text]}>
               {error || 'Program není momentálně dostupný'}
             </Text>
           </View>
@@ -283,12 +231,10 @@ export default function ProgramScreen() {
     <>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <View style={styles.container}>
-        {/* Sticky Header */}
         <View style={styles.stickyHeader}>
           <Header title="PROGRAM" />
         </View>
 
-        {/* Scrollable Content */}
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -296,9 +242,7 @@ export default function ProgramScreen() {
           scrollEventThrottle={400}
           bounces={false}
           overScrollMode="never"
-          refreshControl={undefined}
         >
-          {/* Day switcher */}
           <View style={styles.daySwitcher}>
             {(['dayOne', 'dayTwo'] as const).map((key) => {
               const dayStart = dayjs(timelineData.config[key].start);
@@ -309,15 +253,12 @@ export default function ProgramScreen() {
                 <TouchableOpacity
                   key={key}
                   onPress={() => setDay(key)}
-                  style={[
-                    styles.dayButton,
-                    isActive && styles.dayButtonActive,
-                  ]}
+                  style={[styles.dayButton, isActive && styles.dayButtonActive]}
                 >
-                  <Text style={styles.dayButtonText}>
+                  <Text style={[styles.dayButtonText, globalStyles.subtitle]}>
                     {dayStart.format('dd D. M. YYYY')}
                   </Text>
-                  <Text style={styles.dayButtonSubtext}>
+                  <Text style={[styles.dayButtonSubtext, globalStyles.caption]}>
                     {dayStart.format('HH:mm')} – {dayEnd.format('HH:mm')}
                   </Text>
                 </TouchableOpacity>
@@ -325,62 +266,49 @@ export default function ProgramScreen() {
             })}
           </View>
 
-          {/* Timeline with horizontal scroll */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
             <View style={styles.timelineContainer}>
-              {/* Hours column */}
               <View style={styles.hoursColumn}>
                 {timeline.map((time, i) => (
                   <View key={i} style={styles.hourSlot}>
-                    <Text style={styles.hourText}>{time}</Text>
+                    <Text style={[styles.hourText, globalStyles.caption]}>{time}</Text>
                   </View>
                 ))}
               </View>
 
-              {/* Stage columns */}
               {stagesConfig.map((stage) => {
                 const currentDayStart = dayjs(timelineData.config[day].start);
                 const stageEvents = dayEvents.filter((ev) => ev.stage === stage.stage);
 
                 return (
                   <View key={stage.stage} style={styles.stageColumn}>
-                    {/* Stage header */}
-                    <View
-                      style={[
-                        styles.stageHeader,
-                        { backgroundColor: stage.stageColors },
-                      ]}
-                    >
-                      <Text style={styles.stageHeaderTitle}>{stage.stage_name}</Text>
-                      <Text style={styles.stageHeaderSubtitle}>STAGE</Text>
+                    <View style={[styles.stageHeader, { backgroundColor: stage.stageColors }]}>
+                      <Text style={[styles.stageHeaderTitle, globalStyles.heading]}>
+                        {stage.stage_name}
+                      </Text>
+                      <Text style={[styles.stageHeaderSubtitle, globalStyles.caption]}>STAGE</Text>
                     </View>
 
-                    {/* Timeline with events */}
                     <View style={styles.stageTimeline}>
-                      {/* Hour grid */}
                       {timeline.map((_, i) => (
                         <View key={i} style={styles.timelineSlot} />
                       ))}
 
-                      {/* Events */}
                       {stageEvents.map((event, i) => {
                         if (!event.start || !event.end) return null;
 
                         const start = dayjs(event.start);
                         const end = dayjs(event.end);
-                        const top = (start.diff(currentDayStart, 'minute') / 60) * PIXELS_PER_HOUR;
+                        const top =
+                          (start.diff(currentDayStart, 'minute') / 60) * PIXELS_PER_HOUR;
                         const height = Math.max(
                           40,
                           (end.diff(start, 'minute') / 60) * PIXELS_PER_HOUR
                         );
+
                         const isFavorite = event.id
                           ? favoriteEvents.includes(event.id)
                           : false;
-
-                        // Split name if it contains ": "
-                        const nameParts = event.name?.includes(': ')
-                          ? event.name.split(': ')
-                          : [event.name];
 
                         return (
                           <TouchableOpacity
@@ -391,23 +319,20 @@ export default function ProgramScreen() {
                               {
                                 top,
                                 height,
-                                backgroundColor: stage.stageColorsArtist || stage.stageColors,
+                                backgroundColor:
+                                  stage.stageColorsArtist || stage.stageColors,
                               },
                             ]}
                             activeOpacity={0.8}
                           >
                             <View style={styles.eventContent}>
-                              <Text style={styles.eventName} numberOfLines={2}>
-                                {nameParts.length > 1 ? (
-                                  <>
-                                    {nameParts[0]}:{'\n'}
-                                    {nameParts.slice(1).join(': ')}
-                                  </>
-                                ) : (
-                                  event.name
-                                )}
+                              <Text
+                                style={[globalStyles.heading, styles.eventName ]}
+                                numberOfLines={2}
+                              >
+                                {event.name}
                               </Text>
-                              <Text style={styles.eventTime}>
+                              <Text style={[globalStyles.text, styles.eventTime ]}>
                                 {start.format('HH:mm')} – {end.format('HH:mm')}
                               </Text>
                             </View>
@@ -453,7 +378,6 @@ const styles = StyleSheet.create({
   loadingText: {
     color: '#ffffff',
     marginTop: 20,
-    fontSize: 16,
   },
   stickyHeader: {
     position: 'absolute',
@@ -480,7 +404,6 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#ffffff',
     textAlign: 'center',
-    fontSize: 16,
   },
   daySwitcher: {
     flexDirection: 'row',
@@ -501,13 +424,10 @@ const styles = StyleSheet.create({
   },
   dayButtonText: {
     color: 'white',
-    fontWeight: '600',
     textAlign: 'center',
-    fontSize: 14,
   },
   dayButtonSubtext: {
     color: 'white',
-    fontSize: 12,
     marginTop: 2,
     textAlign: 'center',
   },
@@ -524,7 +444,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   hourText: {
-    fontSize: 12,
     color: 'white',
   },
   stageColumn: {
@@ -539,11 +458,8 @@ const styles = StyleSheet.create({
   },
   stageHeaderTitle: {
     color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
   },
   stageHeaderSubtitle: {
-    fontSize: 10,
     color: 'white',
     marginTop: 2,
   },
@@ -572,15 +488,13 @@ const styles = StyleSheet.create({
   },
   eventName: {
     color: 'white',
-    fontSize: 11,
     textAlign: 'center',
-    fontWeight: 'bold',
+    fontSize: 12,
   },
   eventTime: {
-    color: 'white',
-    fontSize: 9,
-    marginTop: 2,
+    marginTop: 0,
     textAlign: 'center',
+    fontSize: 12,
   },
   eventFavoriteIcon: {
     position: 'absolute',

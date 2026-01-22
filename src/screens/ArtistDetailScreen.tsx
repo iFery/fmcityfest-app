@@ -26,6 +26,7 @@ import { TimelineApiResponse } from '../api/endpoints';
 import NotificationPermissionModal from '../components/NotificationPermissionModal';
 import Toast from '../components/Toast';
 import Header from '../components/Header';
+import { useTheme } from '../theme/ThemeProvider';
 
 dayjs.locale('cs');
 dayjs.extend(localizedFormat);
@@ -45,6 +46,8 @@ interface TimelineEvent {
 }
 
 export default function ArtistDetailScreen() {
+  const { globalStyles } = useTheme();
+
   const route = useRoute<ArtistDetailScreenProps['route']>();
   const navigation = useNavigation<ArtistDetailScreenProps['navigation']>();
   const isFocused = useIsFocused();
@@ -64,7 +67,6 @@ export default function ArtistDetailScreen() {
 
   const isFavorite = favoriteArtists.includes(artistId);
 
-  // Načti timeline data pro získání informací o koncertech
   useEffect(() => {
     const loadTimeline = async () => {
       const data = await loadFromCache<TimelineApiResponse>('timeline');
@@ -73,10 +75,8 @@ export default function ArtistDetailScreen() {
     loadTimeline();
   }, []);
 
-  // Najdi eventy pro tohoto interpreta
   const artistEvents = useMemo(() => {
     if (!timelineData || !artist) return [];
-    
     const numericArtistId = parseInt(artistId, 10);
     return (timelineData.events as TimelineEvent[])
       .filter((event) => event.interpret_id === numericArtistId && event.start && event.id)
@@ -87,7 +87,6 @@ export default function ArtistDetailScreen() {
       });
   }, [timelineData, artistId, artist]);
 
-  // Zjisti, zda má interpret více koncertů
   const hasMultipleConcerts = artistEvents.length > 1;
 
   useEffect(() => {
@@ -102,27 +101,21 @@ export default function ArtistDetailScreen() {
     const wasFavorite = isFavorite;
     toggleArtist(artistId);
 
-    if (!wasFavorite) {
-      // Added to favorites
-      const { status } = await Notifications.getPermissionsAsync();
-      const artistName = artist?.name || 'Interpret';
-      const isFemale = artistName.endsWith('a') || artistName.endsWith('á');
-      const genderSuffix = isFemale ? 'a' : '';
+    const artistName = artist?.name || 'Interpret';
+    const isFemale = artistName.endsWith('a') || artistName.endsWith('á');
+    const genderSuffix = isFemale ? 'a' : '';
 
+    if (!wasFavorite) {
+      const { status } = await Notifications.getPermissionsAsync();
       if (status === 'granted') {
         setToastMessage(`❤️ ${artistName} přidán${genderSuffix}! 🔔 Dostaneš upozornění 10 min před.`);
       } else {
         setToastMessage(`❤️ ${artistName} přidán${genderSuffix}! 🔕 Notifikace nejsou povolené.`);
       }
-      setToastVisible(true);
     } else {
-      // Removed from favorites
-      const artistName = artist?.name || 'Interpret';
-      const isFemale = artistName.endsWith('a') || artistName.endsWith('á');
-      const genderSuffix = isFemale ? 'a' : '';
       setToastMessage(`🤍 ${artistName} odebrán${genderSuffix} z Můj program.`);
-      setToastVisible(true);
     }
+    setToastVisible(true);
   };
 
   const handleEnableNotifications = async () => {
@@ -175,7 +168,6 @@ export default function ArtistDetailScreen() {
     notificationPermissionGranted === false &&
     toastMessage.includes('Notifikace nejsou povolené');
 
-  // Hide screen content when not focused to prevent flicker during tab navigation
   if (!isFocused) {
     return null;
   }
@@ -184,9 +176,9 @@ export default function ArtistDetailScreen() {
     <>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <View style={styles.container}>
-        <ScrollView 
-          bounces={false} 
-          overScrollMode="never" 
+        <ScrollView
+          bounces={false}
+          overScrollMode="never"
           refreshControl={undefined}
           contentContainerStyle={styles.scrollContent}
         >
@@ -197,8 +189,7 @@ export default function ArtistDetailScreen() {
 
             <View style={styles.headerSection}>
               <View style={styles.nameRow}>
-                <Text style={styles.artistName}>{artist.name}</Text>
-                {/* Srdíčko pouze pro interprety s jedním koncertem */}
+                <Text style={[globalStyles.heading, styles.artistName]}>{artist.name}</Text>
                 {!hasMultipleConcerts && (
                   <TouchableOpacity
                     onPress={handleFavoritePress}
@@ -217,7 +208,6 @@ export default function ArtistDetailScreen() {
               <View style={styles.headerBorder} />
             </View>
 
-            {/* Zobraz eventy pokud existují */}
             {artistEvents.length > 0 && (
               <View style={styles.eventsSection}>
                 {artistEvents.map((event, index) => {
@@ -225,13 +215,12 @@ export default function ArtistDetailScreen() {
                   const endDate = event.end ? dayjs(event.end) : null;
                   const eventId = event.id || '';
                   const isEventFav = eventId ? favoriteEvents.includes(eventId) : false;
-                  
+
                   return (
                     <View key={event.id || index} style={styles.eventCard}>
-                      {/* Pro více koncertů: zobraz název na celé šířce nahoře */}
                       {hasMultipleConcerts && event.name && (
                         <View style={styles.eventNameHeader}>
-                          <Text style={styles.eventNameText}>{event.name}</Text>
+                          <Text style={[globalStyles.heading, styles.eventNameText]}>{event.name}</Text>
                           {eventId && (
                             <TouchableOpacity
                               onPress={() => {
@@ -260,15 +249,15 @@ export default function ArtistDetailScreen() {
                       )}
                       <View style={styles.eventRow}>
                         <View style={styles.eventColumn}>
-                          <Text style={styles.eventLabel}>STAGE</Text>
-                          <Text style={styles.eventValue}>
+                          <Text style={[globalStyles.caption, styles.eventLabel]}>STAGE</Text>
+                          <Text style={[globalStyles.heading, styles.eventValue]}>
                             {event.stage_name || event.stage || 'Neznámé pódium'}
                           </Text>
                         </View>
                         <View style={styles.eventDivider} />
                         <View style={styles.eventColumn}>
-                          <Text style={styles.eventLabel}>ČAS</Text>
-                          <Text style={styles.eventValue}>
+                          <Text style={[globalStyles.caption, styles.eventLabel]}>ČAS</Text>
+                          <Text style={[globalStyles.heading, styles.eventValue]}>
                             {startDate
                               ? `${startDate.format('dd')} ${startDate.format('HH:mm')}${
                                   endDate ? ` - ${endDate.format('HH:mm')}` : ''
@@ -283,10 +272,11 @@ export default function ArtistDetailScreen() {
               </View>
             )}
 
-
             {artist.bio ? (
               <View style={styles.bioContainer}>
-                <Text style={styles.bioText}>{artist.bio.replace(/<[^>]*>/g, ' ').trim()}</Text>
+                <Text style={[globalStyles.text, styles.bioText]}>
+                  {artist.bio.replace(/<[^>]*>/g, ' ').trim()}
+                </Text>
               </View>
             ) : (
               <View style={styles.noBioContainer}>
@@ -317,7 +307,7 @@ export default function ArtistDetailScreen() {
           activeOpacity={0.8}
         >
           <Ionicons name="arrow-back" size={20} color="white" style={styles.backIcon} />
-          <Text style={styles.backButtonText}>Zpět</Text>
+          <Text style={[globalStyles.heading, styles.backButtonText]}>Zpět</Text>
         </TouchableOpacity>
       </View>
       <NotificationPermissionModal
@@ -335,7 +325,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#002239',
   },
   scrollContent: {
-    paddingBottom: 50, // Space for back button
+    paddingBottom: 50,
   },
   loadingContainer: {
     flex: 1,
@@ -401,7 +391,6 @@ const styles = StyleSheet.create({
   artistName: {
     color: '#FFFFFF',
     fontSize: 28,
-    fontWeight: '700',
     textAlign: 'left',
     flex: 1,
     marginRight: 12,
@@ -437,7 +426,6 @@ const styles = StyleSheet.create({
   eventNameText: {
     color: '#FFFFFF',
     fontSize: 16,
-    fontWeight: '600',
     flex: 1,
     marginRight: 12,
   },
@@ -460,7 +448,6 @@ const styles = StyleSheet.create({
   eventLabel: {
     color: '#FFFFFF',
     fontSize: 12,
-    fontWeight: '700',
     textTransform: 'uppercase',
     marginBottom: 8,
     letterSpacing: 0.5,
@@ -468,26 +455,7 @@ const styles = StyleSheet.create({
   eventValue: {
     color: '#EA5178',
     fontSize: 16,
-    fontWeight: '700',
     textTransform: 'uppercase',
-  },
-  favoriteButton: {
-    display: 'none',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#0A3652',
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  favoriteIcon: {
-    marginRight: 10,
-  },
-  favoriteButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '500',
   },
   bioContainer: {
     marginTop: 8,
@@ -495,7 +463,7 @@ const styles = StyleSheet.create({
   },
   bioText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: 18,
     lineHeight: 24,
     textAlign: 'left',
   },

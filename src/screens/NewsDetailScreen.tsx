@@ -13,7 +13,6 @@ import {
   StatusBar,
   ScrollView,
   ActivityIndicator,
-  Dimensions,
   Linking,
 } from 'react-native';
 import { useRoute, useNavigation } from '@react-navigation/native';
@@ -25,6 +24,7 @@ import Header from '../components/Header';
 import { newsApi, type ApiError } from '../api';
 import { loadFromCache } from '../utils/cacheManager';
 import type { News } from '../types';
+import { useTheme } from '../theme/ThemeProvider';
 
 type NewsDetailScreenRouteProp = RouteProp<RootStackParamList, 'NewsDetail'>;
 type NewsDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -32,6 +32,7 @@ type NewsDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamLi
 const CACHE_KEY = 'news';
 
 export default function NewsDetailScreen() {
+  const { globalStyles } = useTheme();
   const route = useRoute<NewsDetailScreenRouteProp>();
   const navigation = useNavigation<NewsDetailScreenNavigationProp>();
   const { newsId } = route.params;
@@ -48,7 +49,6 @@ export default function NewsDetailScreen() {
         setLoading(true);
         setError(null);
 
-        // Try to find in cache first
         const cachedNews = await loadFromCache<News[]>(CACHE_KEY);
         if (cachedNews && isMounted) {
           const cachedItem = cachedNews.find((item) => item.id === newsId);
@@ -58,14 +58,12 @@ export default function NewsDetailScreen() {
           }
         }
 
-        // Fetch from API to get full details
         try {
           const response = await newsApi.getById(newsId);
           if (!isMounted) return;
 
           const newsData = response.data;
 
-          // Fix relative URLs to absolute
           if (newsData.text) {
             newsData.text = newsData.text.replace(/src="\/media/g, 'src="https://www.fmcityfest.cz/media');
             newsData.text = newsData.text.replace(/href="\/([^"]*)"/g, 'href="https://www.fmcityfest.cz/$1"');
@@ -74,36 +72,22 @@ export default function NewsDetailScreen() {
 
           setNews(newsData);
         } catch (apiError) {
-          // Ignore AbortError - it's just a cancelled request when component unmounts
-          if (apiError instanceof Error && apiError.name === 'AbortError') {
-            return;
-          }
-
-          // If API fails but we have cached data, use it
-          if (!news && isMounted) {
-            throw apiError;
-          }
+          if (apiError instanceof Error && apiError.name === 'AbortError') return;
+          if (!news && isMounted) throw apiError;
         }
       } catch (err) {
-        // Ignore AbortError - it's just a cancelled request
-        if (err instanceof Error && err.name === 'AbortError') {
-          return;
-        }
-
+        if (err instanceof Error && err.name === 'AbortError') return;
         if (!isMounted) return;
 
         const apiError = err as ApiError;
         setError(apiError.message || 'Nepodařilo se načíst detail novinky');
         console.error('Error loading news detail:', err);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        if (isMounted) setLoading(false);
       }
     };
 
     loadNewsDetail();
-
     return () => {
       isMounted = false;
     };
@@ -127,17 +111,14 @@ export default function NewsDetailScreen() {
     });
   };
 
-  // Simple HTML rendering (without external library for now)
   const renderHtmlContent = (html: string) => {
-    // Basic HTML parsing - for production, consider using react-native-render-html
-    // For now, strip HTML tags and show plain text
     const plainText = html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').trim();
     const paragraphs = plainText.split('\n').filter((p) => p.trim().length > 0);
 
     return (
       <View style={styles.htmlContent}>
         {paragraphs.map((paragraph, index) => (
-          <Text key={index} style={styles.htmlParagraph}>
+          <Text key={index} style={[globalStyles.text, styles.htmlParagraph ]}>
             {paragraph}
           </Text>
         ))}
@@ -160,7 +141,7 @@ export default function NewsDetailScreen() {
         <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
         <Header title="NOVINKY" />
         <View style={styles.content}>
-          <Text style={styles.errorText}>{error || 'Novinka nebyla nalezena'}</Text>
+          <Text style={[globalStyles.text, styles.errorText]}>{error || 'Novinka nebyla nalezena'}</Text>
         </View>
       </View>
     );
@@ -176,16 +157,15 @@ export default function NewsDetailScreen() {
             {news.image_url && (
               <Image source={{ uri: news.image_url }} style={styles.newsImage} resizeMode="cover" />
             )}
-            <Text style={styles.newsTitle}>{news.title}</Text>
-            <Text style={styles.newsDate}>{formatDate(news.date)}</Text>
+            <Text style={[globalStyles.heading, styles.newsTitle ]}>{news.title}</Text>
+            <Text style={[globalStyles.heading, styles.newsDate]}>{formatDate(news.date)}</Text>
             {news.text && renderHtmlContent(news.text)}
           </View>
         </ScrollView>
 
-        {/* Floating back button */}
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={20} color="white" style={styles.backIcon} />
-          <Text style={styles.backButtonText}>Zpět</Text>
+          <Text style={[styles.backButtonText, globalStyles.bodyStrong]}>Zpět</Text>
         </TouchableOpacity>
       </View>
     </>
@@ -215,21 +195,16 @@ const styles = StyleSheet.create({
   },
   newsTitle: {
     color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
     marginBottom: 8,
   },
   newsDate: {
     color: '#21AAB0',
-    fontSize: 14,
-    marginBottom: 16,
   },
   htmlContent: {
     marginTop: 16,
   },
   htmlParagraph: {
     color: 'white',
-    fontSize: 16,
     lineHeight: 24,
     marginBottom: 16,
   },
@@ -237,7 +212,6 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
     marginVertical: 20,
-    fontSize: 16,
   },
   backButton: {
     position: 'absolute',
@@ -260,9 +234,6 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     color: 'white',
-    fontWeight: '600',
     fontSize: 14,
   },
 });
-
-

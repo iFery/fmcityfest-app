@@ -5,13 +5,15 @@
 
 import React from 'react';
 import { View, Text, ImageBackground, StyleSheet } from 'react-native';
+import { useTheme } from '../theme/ThemeProvider';
 
 interface HeaderProps {
   title: string;
 }
 
 export default function Header({ title }: HeaderProps) {
-  // Fallback if background image doesn't exist
+  const { globalStyles } = useTheme();
+
   const backgroundImage = require('../../assets/background-top.png');
 
   return (
@@ -24,6 +26,7 @@ export default function Header({ title }: HeaderProps) {
         <View style={styles.titleWrapper}>
           <Text
             style={[
+              globalStyles.heading,
               styles.headerTitle,
               title?.length > 22 && styles.headerTitleSmall,
             ]}
@@ -55,7 +58,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     color: 'white',
     fontSize: 31,
-    fontWeight: '800',
   },
   headerTitleSmall: {
     fontSize: 22,
@@ -68,9 +70,3 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
 });
-
-
-
-
-
-

@@ -11,12 +11,13 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import ImageZoomBase from 'react-native-image-pan-zoom';
+import Header from '../components/Header';
+import { useTheme } from '../theme/ThemeProvider';
 
 // Type assertion to allow children prop (library types are incomplete)
 const ImageZoom = ImageZoomBase as React.ComponentType<
   React.ComponentProps<typeof ImageZoomBase> & { children?: React.ReactNode }
 >;
-import Header from '../components/Header';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -46,6 +47,7 @@ const HEADER_HEIGHT = 130;
 const MAP_CONTAINER_HEIGHT = SCREEN_HEIGHT - HEADER_HEIGHT - 150;
 
 export default function MapScreen() {
+  const { globalStyles } = useTheme();
   const [selectedMap, setSelectedMap] = useState<MapType>('areal');
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
@@ -91,6 +93,7 @@ export default function MapScreen() {
                   <Text
                     style={[
                       styles.filterText,
+                      globalStyles.bodyStrong,
                       selectedMap === map.key && styles.activeFilterText,
                     ]}
                   >
@@ -110,7 +113,7 @@ export default function MapScreen() {
             )}
             {imageError ? (
               <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>
+                <Text style={[styles.errorText, globalStyles.text]}>
                   Nepodařilo se načíst mapu
                 </Text>
               </View>
@@ -186,13 +189,10 @@ const styles = StyleSheet.create({
   },
   filterText: {
     color: '#FFFFFF',
-    fontWeight: '500',
     textTransform: 'uppercase',
-    fontSize: 14,
   },
   activeFilterText: {
     color: '#FFFFFF',
-    fontWeight: '600',
   },
   mapContainer: {
     width: '100%',
@@ -223,7 +223,6 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#FFFFFF',
-    fontSize: 16,
     textAlign: 'center',
   },
 });

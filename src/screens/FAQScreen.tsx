@@ -18,10 +18,10 @@ import { RootStackParamList } from '../navigation/linking';
 import Header from '../components/Header';
 import { useFAQ } from '../hooks/useFAQ';
 import type { FAQCategory } from '../types';
+import { useTheme } from '../theme/ThemeProvider';
 
 const HEADER_HEIGHT = 130;
 
-// Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
@@ -33,6 +33,8 @@ interface ExpandableFAQItemProps {
 }
 
 function ExpandableFAQItem({ item, isExpanded, onToggle }: ExpandableFAQItemProps) {
+  const { globalStyles } = useTheme();
+
   return (
     <View style={styles.faqItem}>
       <TouchableOpacity
@@ -43,7 +45,7 @@ function ExpandableFAQItem({ item, isExpanded, onToggle }: ExpandableFAQItemProp
         }}
         activeOpacity={0.7}
       >
-        <Text style={styles.faqQuestionText}>{item.otazka}</Text>
+        <Text style={[globalStyles.heading, styles.faqQuestionText]}>{item.otazka}</Text>
         <Ionicons
           name={isExpanded ? 'chevron-up' : 'chevron-down'}
           size={24}
@@ -52,7 +54,7 @@ function ExpandableFAQItem({ item, isExpanded, onToggle }: ExpandableFAQItemProp
       </TouchableOpacity>
       {isExpanded && (
         <View style={styles.faqAnswer}>
-          <Text style={styles.faqAnswerText}>{item.odpoved}</Text>
+          <Text style={[globalStyles.text, styles.faqAnswerText]}>{item.odpoved}</Text>
         </View>
       )}
     </View>
@@ -62,6 +64,7 @@ function ExpandableFAQItem({ item, isExpanded, onToggle }: ExpandableFAQItemProp
 type FAQScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 export default function FAQScreen() {
+  const { globalStyles } = useTheme();
   const navigation = useNavigation<FAQScreenNavigationProp>();
   const { faq, loading, error } = useFAQ();
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
@@ -89,14 +92,12 @@ export default function FAQScreen() {
     <>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <View style={styles.container}>
-        {/* Sticky Header */}
         <View style={styles.stickyHeader}>
           <Header title="ČASTÉ DOTAZY" />
         </View>
 
-        {/* Scrollable Content */}
-        <ScrollView 
-          bounces={false} 
+        <ScrollView
+          bounces={false}
           overScrollMode="never"
           refreshControl={undefined}
           contentContainerStyle={styles.scrollContent}
@@ -110,7 +111,7 @@ export default function FAQScreen() {
             ) : (
               faq.map((category) => (
                 <View key={category.id} style={styles.category}>
-                  <Text style={styles.categoryTitle}>{category.name}</Text>
+                  <Text style={[globalStyles.heading, styles.categoryTitle]}>{category.name}</Text>
                   {category.faqs.map((item) => (
                     <ExpandableFAQItem
                       key={item.id}
@@ -125,10 +126,9 @@ export default function FAQScreen() {
           </View>
         </ScrollView>
 
-        {/* Floating back button */}
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={20} color="white" style={styles.backIcon} />
-          <Text style={styles.backButtonText}>Zpět</Text>
+          <Text style={[globalStyles.heading, styles.backButtonText]}>Zpět</Text>
         </TouchableOpacity>
       </View>
     </>
@@ -169,8 +169,6 @@ const styles = StyleSheet.create({
     marginBottom: 22,
   },
   categoryTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
     color: 'white',
     marginBottom: 16,
   },
@@ -190,8 +188,6 @@ const styles = StyleSheet.create({
   },
   faqQuestionText: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
     color: 'white',
     marginRight: 12,
   },
@@ -203,7 +199,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#0A3652',
   },
   faqAnswerText: {
-    fontSize: 15,
     color: '#CCC',
     lineHeight: 22,
     paddingTop: 12,
@@ -235,7 +230,6 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     color: 'white',
-    fontWeight: '600',
     fontSize: 14,
   },
 });
