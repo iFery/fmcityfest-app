@@ -15,6 +15,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import Toast from './Toast';
 import dayjs from 'dayjs';
 import 'dayjs/locale/cs';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -40,8 +41,16 @@ interface EventSelectionModalProps {
   artistName: string;
   events: TimelineEvent[];
   favoriteEventIds: string[];
-  onToggleEvent: (eventId: string) => void;
+  onToggleEvent: (eventId: string, eventName?: string) => void;
   onDismiss: () => void;
+  toastVisible?: boolean;
+  toastMessage?: string;
+  toastDuration?: number;
+  toastAction?: {
+    label: string;
+    onPress: () => void;
+  };
+  onToastDismiss?: () => void;
 }
 
 export default function EventSelectionModal({
@@ -51,6 +60,11 @@ export default function EventSelectionModal({
   favoriteEventIds,
   onToggleEvent,
   onDismiss,
+  toastVisible = false,
+  toastMessage = '',
+  toastDuration = 2000,
+  toastAction,
+  onToastDismiss,
 }: EventSelectionModalProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -99,6 +113,11 @@ export default function EventSelectionModal({
             },
           ]}
         />
+        <TouchableOpacity
+          style={StyleSheet.absoluteFillObject}
+          activeOpacity={1}
+          onPress={onDismiss}
+        />
         
         <Animated.View
           style={[
@@ -135,7 +154,7 @@ export default function EventSelectionModal({
                   <TouchableOpacity
                     key={event.id}
                     style={[styles.eventItem, isFavorite && styles.eventItemFavorite]}
-                    onPress={() => onToggleEvent(event.id!)}
+                    onPress={() => onToggleEvent(event.id!, event.name || artistName)}
                     activeOpacity={0.7}
                   >
                     <View style={styles.eventContent}>
@@ -173,6 +192,15 @@ export default function EventSelectionModal({
             </ScrollView>
           </View>
         </Animated.View>
+        {onToastDismiss && (
+          <Toast
+            visible={toastVisible}
+            message={toastMessage}
+            onDismiss={onToastDismiss}
+            duration={toastDuration}
+            actionButton={toastAction}
+          />
+        )}
       </View>
     </Modal>
   );
@@ -279,7 +307,4 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 });
-
-
-
 

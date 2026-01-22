@@ -6,6 +6,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/cs';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
 import Header from '../components/Header';
+import { useNotificationPreferencesStore } from '../stores/notificationPreferencesStore';
 
 dayjs.locale('cs');
 dayjs.extend(localizedFormat);
@@ -15,6 +16,7 @@ const HEADER_HEIGHT = 130;
 export default function NotificationsScreen() {
   const [scheduledNotifications, setScheduledNotifications] = useState<Notifications.NotificationRequest[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const { favoriteArtistsNotificationLeadMinutes } = useNotificationPreferencesStore();
 
   const getNotificationDate = React.useCallback((trigger: Notifications.NotificationTrigger | null): Date | null => {
     if (!trigger) {
@@ -197,7 +199,7 @@ export default function NotificationsScreen() {
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>Žádné naplánované notifikace</Text>
               <Text style={styles.emptySubtext}>
-                Přidej interprety do oblíbených a notifikace se ti automaticky naplánují 10 minut před jejich koncerty.
+                Přidej koncerty do oblíbených a notifikace se ti automaticky naplánují {favoriteArtistsNotificationLeadMinutes} minut před začátkem.
               </Text>
             </View>
           ) : (

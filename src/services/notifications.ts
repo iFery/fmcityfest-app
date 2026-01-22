@@ -6,10 +6,16 @@ import { handleNotificationNavigation } from './notificationNavigation';
 import { TimelineApiResponse } from '../api/endpoints';
 import { loadFromCache } from '../utils/cacheManager';
 import { ensureFirebaseInitialized, isFirebaseReady, safeMessagingCall } from './firebase';
+import { useNotificationPreferencesStore } from '../stores/notificationPreferencesStore';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 
 dayjs.extend(utc);
+
+const getLeadTimeMinutes = () => {
+  const minutes = useNotificationPreferencesStore.getState().favoriteArtistsNotificationLeadMinutes;
+  return Number.isFinite(minutes) && minutes > 0 ? minutes : 10;
+};
 
 /**
  * Configure notification handler
@@ -278,7 +284,89 @@ class NotificationService {
   }
 
   /**
-   * Naplánuje notifikace pro interpreta - 10 minut před každým jeho koncertem
+   * Naplánuje notifikaci pro konkrétní koncert (podle nastaveného předstihu)
+   */
+  async scheduleEventNotification(
+    eventId: string,
+    event: {
+      id?: string;
+      name?: string;
+      interpret_id?: number;
+      stage?: string;
+      stage_name?: string;
+      start?: string;
+      end?: string;
+      [key: string]: unknown;
+    },
+    artistName?: string
+  ): Promise<void> {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+
+      if (!event.start) {
+        return;
+      }
+
+      const eventStart = dayjs(event.start);
+      if (!eventStart.isValid()) {
+        return;
+      }
+
+      const now = dayjs();
+      const minTimeOffset = 5; // sekund
+      const leadTimeMinutes = getLeadTimeMinutes();
+      const notificationTime = eventStart.subtract(leadTimeMinutes, 'minute');
+      const minNotificationTime = now.add(minTimeOffset, 'second');
+      if (!notificationTime.isAfter(minNotificationTime)) {
+        return;
+      }
+
+      const notificationDate = notificationTime.toDate();
+      if (isNaN(notificationDate.getTime())) {
+        return;
+      }
+
+      const titleArtistName = artistName || event.name || 'Koncert';
+      const contentTitle = `${titleArtistName} začíná za ${leadTimeMinutes} minut!`;
+      const contentBody =
+        event.name || `${titleArtistName} na ${event.stage_name || event.stage || 'pódiu'}`;
+
+      await Notifications.scheduleNotificationAsync({
+        identifier: `favorite_event_${eventId}`,
+        content: {
+          title: contentTitle,
+          body: contentBody,
+          data: {
+            type: 'artist',
+            artistId: event.interpret_id ? String(event.interpret_id) : undefined,
+            artistName: titleArtistName,
+            eventId: event.id || eventId,
+            eventName: event.name,
+            stage: event.stage_name || event.stage,
+          },
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.DATE,
+          date: notificationDate,
+        },
+      });
+    } catch (error) {
+      console.error(`Error scheduling notification for event ${eventId}:`, error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch {
+        // Ignore Crashlytics errors
+      }
+    }
+  }
+
+  /**
+   * Naplánuje notifikace pro interpreta - podle nastaveného předstihu
    */
   async scheduleArtistNotifications(artistId: string, artistName: string): Promise<void> {
     try {
@@ -304,7 +392,8 @@ class NotificationService {
         (event) => event.interpret_id === numericArtistId && event.start
       );
 
-      // Naplánuj notifikaci 10 minut před každým koncertem
+      // Naplánuj notifikaci podle nastaveného předstihu
+      const leadTimeMinutes = getLeadTimeMinutes();
       for (const event of artistEvents) {
         if (!event.start) continue;
 
@@ -317,7 +406,7 @@ class NotificationService {
           continue;
         }
 
-        const notificationTime = eventStart.subtract(10, 'minute');
+        const notificationTime = eventStart.subtract(leadTimeMinutes, 'minute');
 
         // Naplánuj pouze budoucí notifikace, které jsou alespoň minTimeOffset sekund v budoucnosti
         // To zabraňuje okamžitému zobrazení notifikace
@@ -358,7 +447,7 @@ class NotificationService {
             await Notifications.scheduleNotificationAsync({
               identifier: notificationId,
               content: {
-                title: `${artistName} začíná za 10 minut!`,
+                title: `${artistName} začíná za ${leadTimeMinutes} minut!`,
                 body: event.name || `${artistName} na ${event.stage_name || event.stage || 'pódiu'}`,
                 data: {
                   type: 'artist',
@@ -462,6 +551,103 @@ class NotificationService {
 
     } catch (error) {
       console.error('Error cancelling all artist notifications:', error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch {
+        // Ignore Crashlytics errors
+      }
+    }
+  }
+
+  /**
+   * Zruší všechny naplánované notifikace pro oblíbené koncerty
+   */
+  async cancelAllFavoriteNotifications(): Promise<void> {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+
+      const scheduledNotifications = await Notifications.getAllScheduledNotificationsAsync();
+
+      for (const notification of scheduledNotifications) {
+        const data = notification.content.data as Record<string, unknown> | undefined;
+        const isFavoriteNotification =
+          data?.type === 'artist' ||
+          (typeof notification.identifier === 'string' &&
+            notification.identifier.startsWith('favorite_event_'));
+
+        if (isFavoriteNotification) {
+          try {
+            await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+          } catch (error) {
+            console.error(`Error cancelling notification ${notification.identifier}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error cancelling all favorite notifications:', error);
+      try {
+        if (isFirebaseReady()) {
+          crashlytics().recordError(error as Error);
+        }
+      } catch {
+        // Ignore Crashlytics errors
+      }
+    }
+  }
+
+  /**
+   * Aktualizuje notifikace pro všechny oblíbené koncerty
+   */
+  async updateAllEventNotifications(favoriteEventIds: string[]): Promise<void> {
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        return;
+      }
+
+      await this.cancelAllFavoriteNotifications();
+
+      const timelineData = await loadFromCache<TimelineApiResponse>('timeline');
+      if (!timelineData || !timelineData.events) {
+        return;
+      }
+
+      const artists = await loadFromCache<{ id: string; name: string }[]>('artists');
+      const artistNameMap = new Map<string, string>();
+      if (artists) {
+        for (const artist of artists) {
+          artistNameMap.set(String(artist.id), artist.name);
+        }
+      }
+
+      const events = timelineData.events as {
+        id?: string;
+        name?: string;
+        interpret_id?: number;
+        stage?: string;
+        stage_name?: string;
+        start?: string;
+        end?: string;
+        [key: string]: unknown;
+      }[];
+
+      const uniqueEventIds = Array.from(new Set(favoriteEventIds));
+      for (const eventId of uniqueEventIds) {
+        const event = events.find((e) => e.id === eventId);
+        if (!event) continue;
+
+        const artistId = event.interpret_id ? String(event.interpret_id) : undefined;
+        const artistName = artistId ? artistNameMap.get(artistId) : undefined;
+
+        await this.scheduleEventNotification(eventId, event, artistName);
+      }
+    } catch (error) {
+      console.error('Error updating all event notifications:', error);
       try {
         if (isFirebaseReady()) {
           crashlytics().recordError(error as Error);

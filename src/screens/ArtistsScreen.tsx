@@ -14,17 +14,16 @@ import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Notifications from 'expo-notifications';
 import { RootStackParamList } from '../navigation/linking';
 import { useArtists } from '../hooks/useArtists';
 import { useFavorites } from '../hooks/useFavorites';
+import { useFavoriteFeedback } from '../hooks/useFavoriteFeedback';
 import { useNotificationPrompt } from '../hooks/useNotificationPrompt';
 import { useTimeline } from '../contexts/TimelineContext';
 import NotificationPermissionModal from '../components/NotificationPermissionModal';
 import EventSelectionModal from '../components/EventSelectionModal';
 import Toast from '../components/Toast';
 import Header from '../components/Header';
-import { notificationService } from '../services';
 import { useTheme } from '../theme/ThemeProvider';
 import type { Artist } from '../types';
 
@@ -48,7 +47,7 @@ export default function ArtistsScreen() {
   const { globalStyles } = useTheme();
   const navigation = useNavigation<ArtistsScreenNavigationProp>();
   const { artists, loading, error, refetch } = useArtists();
-  const { toggleArtist, toggleEvent, isArtistFavorite, favoriteEvents, favoriteArtists } = useFavorites();
+  const { toggleEvent, isArtistFavorite, isEventFavorite, favoriteEvents } = useFavorites();
   const { timelineData } = useTimeline();
   const previousTabRef = useRef<string | null>(null);
 
@@ -92,9 +91,18 @@ export default function ArtistsScreen() {
     });
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [showFavoritePermissionModal, setShowFavoritePermissionModal] = useState(false);
+  const {
+    toastVisible,
+    toastMessage,
+    toastDuration,
+    toastAction,
+    permissionModalVisible,
+    handleFavoriteAdded,
+    handleFavoriteRemoved,
+    handlePermissionAccept,
+    handlePermissionDismiss,
+    hideToast,
+  } = useFavoriteFeedback({ promptStyle: 'modal' });
 
   const categories = useMemo(() => {
     const cats = Array.from(new Set(artists.map((artist) => artist.genre || 'Ostatní')));
@@ -139,22 +147,11 @@ export default function ArtistsScreen() {
 
     filteredArtists.forEach((artist) => {
       const artistId = artist.id;
-      let isFavorite = favoriteArtists.includes(artistId);
-
-      if (timelineData && !isFavorite) {
-        const artistEvents = artistEventsMap.get(artistId) || [];
-        if (artistEvents.length > 1) {
-          isFavorite = artistEvents.some(
-            (event) => event.id && favoriteEvents.includes(event.id)
-          );
-        }
-      }
-
-      map.set(artistId, isFavorite);
+      map.set(artistId, isArtistFavorite(artistId));
     });
 
     return map;
-  }, [filteredArtists, timelineData, artistEventsMap, favoriteArtists, favoriteEvents]);
+  }, [filteredArtists, isArtistFavorite]);
 
   const handleArtistPress = useCallback((artist: Artist) => {
     navigation.navigate('ArtistDetail', {
@@ -177,59 +174,41 @@ export default function ArtistsScreen() {
         return;
       }
 
-      const wasFavorite = isArtistFavorite(artistId);
-      toggleArtist(artistId);
+      const eventId = artistEvents[0]?.id;
+      if (!eventId) return;
+
+      const wasFavorite = isEventFavorite(eventId);
+      toggleEvent(eventId);
 
       if (!wasFavorite) {
-        const { status } = await Notifications.getPermissionsAsync();
-        if (status === 'granted') {
-          setToastMessage('❤️ Přidáno do Můj program! 🔔');
-          setToastVisible(true);
-        } else {
-          setShowFavoritePermissionModal(true);
-        }
+        await handleFavoriteAdded(artist.name || 'Interpret');
       } else {
-        setToastMessage('💔 Odebráno z Můj program.');
-        setToastVisible(true);
+        await handleFavoriteRemoved(artist.name || 'Interpret');
       }
     },
-    [artists, isArtistFavorite, toggleArtist, artistEventsMap]
+    [artists, artistEventsMap, handleFavoriteAdded, handleFavoriteRemoved, isEventFavorite, toggleEvent]
   );
 
   const handleEventToggle = useCallback(
-    (eventId: string) => {
+    async (eventId: string, eventName?: string) => {
+      const wasFavorite = isEventFavorite(eventId);
       toggleEvent(eventId);
+      const label = eventName || 'Koncert';
+      if (!wasFavorite) {
+        await handleFavoriteAdded(label);
+      } else {
+        await handleFavoriteRemoved(label);
+      }
     },
-    [toggleEvent]
+    [handleFavoriteAdded, handleFavoriteRemoved, isEventFavorite, toggleEvent]
   );
 
   const handleEventModalDismiss = useCallback(() => {
+    hideToast();
     setEventModalVisible(false);
     setSelectedArtistForModal(null);
     setSelectedArtistEvents([]);
-  }, []);
-
-  const handleFavoritePermissionAccept = useCallback(async () => {
-    setShowFavoritePermissionModal(false);
-    const granted = await notificationService.requestPermissions();
-
-    const { status } = await Notifications.getPermissionsAsync();
-    setNotificationPermissionGranted(status === 'granted');
-
-    if (granted) {
-      await notificationService.getToken();
-      setToastMessage('❤️ Přidáno do Můj program! 🔔 Dostaneš upozornění 10 min před.');
-    } else {
-      setToastMessage('❤️ Přidáno do Můj program! 🔕 Notifikace nejsou povolené.');
-    }
-    setToastVisible(true);
-  }, []);
-
-  const handleFavoritePermissionDismiss = useCallback(() => {
-    setShowFavoritePermissionModal(false);
-    setToastMessage('❤️ Přidáno do Můj program! 🔕 Notifikace nejsou povolené.');
-    setToastVisible(true);
-  }, []);
+  }, [hideToast]);
 
   const renderArtistCard = useCallback(
     ({ item }: { item: Artist & { id?: string } }) => {
@@ -238,6 +217,8 @@ export default function ArtistsScreen() {
       }
 
       const isFavorite = artistFavoriteStatusMap.get(item.id) || false;
+      const artistEvents = artistEventsMap.get(item.id) || [];
+      const canFavorite = artistEvents.length > 0;
 
       return (
         <TouchableOpacity
@@ -257,24 +238,26 @@ export default function ArtistsScreen() {
               {item.name}
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.favoriteButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              handleFavoritePress(item.id);
-            }}
-            activeOpacity={0.7}
-          >
-            <Ionicons
-              name={isFavorite ? 'heart' : 'heart-outline'}
-              size={24}
-              color={isFavorite ? '#EA5178' : '#FFFFFF'}
-            />
-          </TouchableOpacity>
+          {canFavorite && (
+            <TouchableOpacity
+              style={styles.favoriteButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleFavoritePress(item.id);
+              }}
+              activeOpacity={0.7}
+            >
+              <Ionicons
+                name={isFavorite ? 'heart' : 'heart-outline'}
+                size={24}
+                color={isFavorite ? '#EA5178' : '#FFFFFF'}
+              />
+            </TouchableOpacity>
+          )}
         </TouchableOpacity>
       );
     },
-    [artistFavoriteStatusMap, handleArtistPress, handleFavoritePress, globalStyles.heading]
+    [artistFavoriteStatusMap, artistEventsMap, handleArtistPress, handleFavoritePress, globalStyles.heading]
   );
 
   const renderFilters = () => (
@@ -364,12 +347,15 @@ export default function ArtistsScreen() {
           initialNumToRender={10}
         />
 
-        <Toast
-          visible={toastVisible}
-          message={toastMessage}
-          onDismiss={() => setToastVisible(false)}
-          duration={2000}
-        />
+        {!eventModalVisible && (
+          <Toast
+            visible={toastVisible}
+            message={toastMessage}
+            onDismiss={hideToast}
+            duration={toastDuration}
+            actionButton={toastAction}
+          />
+        )}
       </View>
 
       <NotificationPermissionModal
@@ -378,9 +364,9 @@ export default function ArtistsScreen() {
         onDismiss={handleDismiss}
       />
       <NotificationPermissionModal
-        visible={showFavoritePermissionModal}
-        onAllowNotifications={handleFavoritePermissionAccept}
-        onDismiss={handleFavoritePermissionDismiss}
+        visible={permissionModalVisible}
+        onAllowNotifications={handlePermissionAccept}
+        onDismiss={handlePermissionDismiss}
       />
       <EventSelectionModal
         visible={eventModalVisible}
@@ -389,6 +375,11 @@ export default function ArtistsScreen() {
         favoriteEventIds={favoriteEvents}
         onToggleEvent={handleEventToggle}
         onDismiss={handleEventModalDismiss}
+        toastVisible={toastVisible}
+        toastMessage={toastMessage}
+        toastDuration={toastDuration}
+        toastAction={toastAction}
+        onToastDismiss={hideToast}
       />
     </>
   );

@@ -21,9 +21,7 @@ import { useArtists } from '../hooks/useArtists';
 import { useFavorites } from '../hooks/useFavorites';
 import { useTimeline } from '../contexts/TimelineContext';
 import Header from '../components/Header';
-import ArtistCard from '../components/ArtistCard';
 import { useTheme } from '../theme/ThemeProvider';
-import type { Artist } from '../types';
 
 dayjs.locale('cs');
 dayjs.extend(localizedFormat);
@@ -47,7 +45,7 @@ export default function FavoritesScreen() {
   const { globalStyles } = useTheme();
   const navigation = useNavigation<FavoritesScreenNavigationProp>();
   const { artists, loading: artistsLoading } = useArtists();
-  const { favoriteArtists, favoriteEvents, toggleArtist } = useFavorites();
+  const { favoriteEvents } = useFavorites();
   const { timelineData, loading: timelineLoading } = useTimeline();
   const previousTabRef = useRef<string | null>(null);
   const [showPastEvents, setShowPastEvents] = useState(false);
@@ -125,23 +123,6 @@ export default function FavoritesScreen() {
     return byDay;
   }, [eventsToDisplay]);
 
-  const artistsWithEvents = useMemo(() => {
-    if (!favoriteEventsList.length) return new Set<number>();
-    const set = new Set<number>();
-    favoriteEventsList.forEach((e) => e.interpret_id && set.add(e.interpret_id));
-    return set;
-  }, [favoriteEventsList]);
-
-  const unscheduledArtists = useMemo(() => {
-    if (!favoriteArtists.length || !artists.length) return [];
-    return artists
-      .filter((a) => {
-        const id = parseInt(a.id, 10);
-        return favoriteArtists.includes(a.id) && !artistsWithEvents.has(id);
-      })
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [artists, favoriteArtists, artistsWithEvents]);
-
   const getArtistName = (artistId: number | string): string =>
     artists.find((a) => String(a.id) === String(artistId))?.name ||
     `Neznámý interpret (${artistId})`;
@@ -159,13 +140,6 @@ export default function FavoritesScreen() {
         artistName: event.name || getArtistName(event.interpret_id),
       });
     }
-  };
-
-  const handleArtistPress = (artist: Artist) => {
-    navigation.navigate('ArtistDetail', {
-      artistId: artist.id,
-      artistName: artist.name,
-    });
   };
 
   const loading =
@@ -197,10 +171,10 @@ export default function FavoritesScreen() {
           bounces={false}
           overScrollMode="never"
         >
-          {favoriteEventsList.length === 0 && unscheduledArtists.length === 0 ? (
+          {favoriteEventsList.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={[globalStyles.text, styles.emptyText]}>
-                Nemáš zatím uložené žádné interprety.
+                Nemáš zatím uložené žádné koncerty.
               </Text>
             </View>
           ) : (
@@ -326,30 +300,6 @@ export default function FavoritesScreen() {
                     );
                   })}
 
-              {unscheduledArtists.length > 0 && (
-                <View style={styles.unscheduledSection}>
-                  <View style={styles.sectionHeader}>
-                    <Ionicons name="time-outline" size={24} color="#EA5178" />
-                    <Text style={[styles.sectionTitle, globalStyles.heading]}>
-                      Nenaplánované koncerty
-                    </Text>
-                    <Text style={[styles.sectionCount, globalStyles.caption]}>
-                      ({unscheduledArtists.length})
-                    </Text>
-                  </View>
-
-                  {unscheduledArtists.map((artist) => (
-                    <ArtistCard
-                      key={artist.id}
-                      artist={artist}
-                      onPress={() => handleArtistPress(artist)}
-                      showFavoriteButton
-                      isFavorite={favoriteArtists.includes(artist.id)}
-                      onFavoritePress={() => toggleArtist(artist.id)}
-                    />
-                  ))}
-                </View>
-              )}
             </>
           )}
         </ScrollView>

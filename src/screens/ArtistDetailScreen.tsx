@@ -12,7 +12,6 @@ import {
 import { useRoute, useNavigation, useIsFocused } from '@react-navigation/native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import * as Notifications from 'expo-notifications';
 import dayjs from 'dayjs';
 import 'dayjs/locale/cs';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
@@ -20,7 +19,7 @@ import utc from 'dayjs/plugin/utc';
 import { RootStackParamList } from '../navigation/linking';
 import { useArtists } from '../hooks/useArtists';
 import { useFavorites } from '../hooks/useFavorites';
-import { notificationService } from '../services';
+import { useFavoriteFeedback } from '../hooks/useFavoriteFeedback';
 import { loadFromCache } from '../utils/cacheManager';
 import { TimelineApiResponse } from '../api/endpoints';
 import NotificationPermissionModal from '../components/NotificationPermissionModal';
@@ -53,19 +52,25 @@ export default function ArtistDetailScreen() {
   const isFocused = useIsFocused();
   const { artistId } = route.params;
   const { artists, loading, error, refetch } = useArtists();
-  const { toggleArtist, toggleEvent, favoriteArtists, favoriteEvents } = useFavorites();
+  const { toggleEvent, isEventFavorite, favoriteEvents } = useFavorites();
 
-  const [toastVisible, setToastVisible] = useState(false);
-  const [toastMessage, setToastMessage] = useState('');
-  const [showPermissionModal, setShowPermissionModal] = useState(false);
-  const [notificationPermissionGranted, setNotificationPermissionGranted] = useState<boolean | null>(null);
+  const {
+    toastVisible,
+    toastMessage,
+    toastDuration,
+    toastAction,
+    permissionModalVisible,
+    handleFavoriteAdded,
+    handleFavoriteRemoved,
+    handlePermissionAccept,
+    handlePermissionDismiss,
+    hideToast,
+  } = useFavoriteFeedback({ promptStyle: 'toast-action' });
   const [timelineData, setTimelineData] = useState<TimelineApiResponse | null>(null);
 
   const artist = React.useMemo(() => {
     return artists.find((a) => a.id === artistId);
   }, [artists, artistId]);
-
-  const isFavorite = favoriteArtists.includes(artistId);
 
   useEffect(() => {
     const loadTimeline = async () => {
@@ -87,53 +92,24 @@ export default function ArtistDetailScreen() {
       });
   }, [timelineData, artistId, artist]);
 
+  const primaryEventId = artistEvents[0]?.id;
+  const isFavorite = primaryEventId ? isEventFavorite(primaryEventId) : false;
+
   const hasMultipleConcerts = artistEvents.length > 1;
 
-  useEffect(() => {
-    const checkPermission = async () => {
-      const { status } = await Notifications.getPermissionsAsync();
-      setNotificationPermissionGranted(status === 'granted');
-    };
-    checkPermission();
-  }, []);
-
   const handleFavoritePress = async () => {
-    const wasFavorite = isFavorite;
-    toggleArtist(artistId);
+    const eventId = artistEvents[0]?.id;
+    if (!eventId) return;
+
+    const wasFavorite = isEventFavorite(eventId);
+    toggleEvent(eventId);
 
     const artistName = artist?.name || 'Interpret';
-    const isFemale = artistName.endsWith('a') || artistName.endsWith('á');
-    const genderSuffix = isFemale ? 'a' : '';
-
     if (!wasFavorite) {
-      const { status } = await Notifications.getPermissionsAsync();
-      if (status === 'granted') {
-        setToastMessage(`❤️ ${artistName} přidán${genderSuffix}! 🔔 Dostaneš upozornění 10 min před.`);
-      } else {
-        setToastMessage(`❤️ ${artistName} přidán${genderSuffix}! 🔕 Notifikace nejsou povolené.`);
-      }
+      await handleFavoriteAdded(artistName);
     } else {
-      setToastMessage(`🤍 ${artistName} odebrán${genderSuffix} z Můj program.`);
+      await handleFavoriteRemoved(artistName);
     }
-    setToastVisible(true);
-  };
-
-  const handleEnableNotifications = async () => {
-    setShowPermissionModal(true);
-  };
-
-  const handleModalAccept = async () => {
-    setShowPermissionModal(false);
-    const granted = await notificationService.requestPermissions();
-    if (granted) {
-      await notificationService.getToken();
-    }
-    const { status } = await Notifications.getPermissionsAsync();
-    setNotificationPermissionGranted(status === 'granted');
-  };
-
-  const handleModalDismiss = () => {
-    setShowPermissionModal(false);
   };
 
   if (loading && !artist) {
@@ -162,12 +138,6 @@ export default function ArtistDetailScreen() {
     );
   }
 
-  const showNotificationButton =
-    toastVisible &&
-    isFavorite &&
-    notificationPermissionGranted === false &&
-    toastMessage.includes('Notifikace nejsou povolené');
-
   if (!isFocused) {
     return null;
   }
@@ -190,7 +160,7 @@ export default function ArtistDetailScreen() {
             <View style={styles.headerSection}>
               <View style={styles.nameRow}>
                 <Text style={[globalStyles.heading, styles.artistName]}>{artist.name}</Text>
-                {!hasMultipleConcerts && (
+                {artistEvents.length === 1 && (
                   <TouchableOpacity
                     onPress={handleFavoritePress}
                     activeOpacity={0.7}
@@ -223,17 +193,14 @@ export default function ArtistDetailScreen() {
                           <Text style={[globalStyles.heading, styles.eventNameText]}>{event.name}</Text>
                           {eventId && (
                             <TouchableOpacity
-                              onPress={() => {
+                              onPress={async () => {
                                 toggleEvent(eventId);
                                 const eventName = event.name || artist?.name || 'Koncert';
-                                const isFemale = eventName.endsWith('a') || eventName.endsWith('á');
-                                const genderSuffix = isFemale ? 'a' : '';
                                 if (isEventFav) {
-                                  setToastMessage(`🤍 ${eventName} odebrán${genderSuffix} z Můj program.`);
+                                  await handleFavoriteRemoved(eventName);
                                 } else {
-                                  setToastMessage(`❤️ ${eventName} přidán${genderSuffix}!`);
+                                  await handleFavoriteAdded(eventName);
                                 }
-                                setToastVisible(true);
                               }}
                               style={styles.eventFavoriteButtonHeader}
                               hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
@@ -289,16 +256,9 @@ export default function ArtistDetailScreen() {
         <Toast
           visible={toastVisible}
           message={toastMessage}
-          onDismiss={() => setToastVisible(false)}
-          duration={notificationPermissionGranted === false && toastMessage.includes('Notifikace') ? 4000 : 2500}
-          actionButton={
-            showNotificationButton
-              ? {
-                  label: 'Povolit notifikace',
-                  onPress: handleEnableNotifications,
-                }
-              : undefined
-          }
+          onDismiss={hideToast}
+          duration={toastDuration}
+          actionButton={toastAction}
         />
 
         <TouchableOpacity
@@ -311,9 +271,9 @@ export default function ArtistDetailScreen() {
         </TouchableOpacity>
       </View>
       <NotificationPermissionModal
-        visible={showPermissionModal}
-        onAllowNotifications={handleModalAccept}
-        onDismiss={handleModalDismiss}
+        visible={permissionModalVisible}
+        onAllowNotifications={handlePermissionAccept}
+        onDismiss={handlePermissionDismiss}
       />
     </>
   );

@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import HomeScreen from '../screens/HomeScreen';
 import ProgramScreen from '../screens/ProgramScreen';
+import ProgramHorizontalScreen from '../screens/ProgramHorizontalScreen';
 import ArtistsScreen from '../screens/ArtistsScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import InfoScreen from '../screens/InfoScreen';
@@ -57,6 +58,7 @@ function ProgramStack() {
   return (
     <Stack.Navigator screenOptions={stackScreenOptions} initialRouteName="ProgramMain">
       <Stack.Screen name="ProgramMain" component={ProgramScreen} />
+      <Stack.Screen name="ProgramHorizontal" component={ProgramHorizontalScreen} />
       <Stack.Screen name="ArtistDetail" component={ArtistDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Partners" component={PartnersScreen} />

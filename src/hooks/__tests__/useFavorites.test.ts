@@ -11,8 +11,8 @@ jest.mock('../../contexts/TimelineContext');
 jest.mock('../../services/notifications', () => ({
   notificationService: {
     getPermissionStatus: jest.fn().mockResolvedValue('denied'),
-    cancelAllArtistNotifications: jest.fn(),
-    updateAllArtistNotifications: jest.fn(),
+    cancelAllFavoriteNotifications: jest.fn(),
+    updateAllEventNotifications: jest.fn(),
   },
 }));
 
@@ -28,9 +28,7 @@ describe('useFavorites', () => {
 
   let favoriteArtists: string[];
   let favoriteEvents: string[];
-  let toggleArtistFavorite: jest.Mock;
   let toggleEventFavorite: jest.Mock;
-  let isArtistFavorite: jest.Mock;
   let isEventFavorite: jest.Mock;
 
   const timelineData = {
@@ -44,23 +42,21 @@ describe('useFavorites', () => {
 
     favoriteArtists = [];
     favoriteEvents = [];
-    toggleArtistFavorite = jest.fn();
     toggleEventFavorite = jest.fn();
-    isArtistFavorite = jest.fn((id: string) => favoriteArtists.includes(id));
     isEventFavorite = jest.fn((id: string) => favoriteEvents.includes(id));
 
     mockedFavoritesStore.mockImplementation(() => ({
       favoriteArtists,
       favoriteEvents,
-      toggleArtistFavorite,
       toggleEventFavorite,
-      isArtistFavorite,
       isEventFavorite,
       clearAll: jest.fn(),
+      clearLegacyArtists: jest.fn(),
     }));
 
     mockedPreferencesStore.mockImplementation(() => ({
       favoriteArtistsNotifications: true,
+      favoriteArtistsNotificationLeadMinutes: 10,
     }));
 
     mockedTimeline.mockReturnValue({ timelineData, loading: false, error: null, refetch: jest.fn() });
@@ -68,7 +64,7 @@ describe('useFavorites', () => {
     mockedLoadFromCache.mockResolvedValue([]);
   });
 
-  it('migrates single-concert artist favorites to event favorites', async () => {
+  it('migrates legacy artist favorites to event favorites', async () => {
     favoriteArtists = ['1'];
 
     renderHook(() => useFavorites());
@@ -78,7 +74,7 @@ describe('useFavorites', () => {
     });
   });
 
-  it('adds artist favorite when adding event favorite', () => {
+  it('toggles event favorite directly', () => {
     const { result } = renderHook(() => useFavorites());
 
     act(() => {
@@ -86,20 +82,5 @@ describe('useFavorites', () => {
     });
 
     expect(toggleEventFavorite).toHaveBeenCalledWith('e1');
-    expect(toggleArtistFavorite).toHaveBeenCalledWith('1');
-  });
-
-  it('removes artist favorite when last event favorite is removed', () => {
-    favoriteArtists = ['1'];
-    favoriteEvents = ['e1'];
-
-    const { result } = renderHook(() => useFavorites());
-
-    act(() => {
-      result.current.toggleEvent('e1');
-    });
-
-    expect(toggleEventFavorite).toHaveBeenCalledWith('e1');
-    expect(toggleArtistFavorite).toHaveBeenCalledWith('1');
   });
 });

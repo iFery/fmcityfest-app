@@ -32,8 +32,10 @@ export default function SettingsScreen() {
   const {
     favoriteArtistsNotifications,
     importantFestivalNotifications,
+    favoriteArtistsNotificationLeadMinutes,
     setFavoriteArtistsNotifications,
     setImportantFestivalNotifications,
+    setFavoriteArtistsNotificationLeadMinutes,
   } = useNotificationPreferencesStore();
 
   const { globalStyles } = useTheme();
@@ -45,6 +47,7 @@ export default function SettingsScreen() {
 
   const [notificationPermissionStatus, setNotificationPermissionStatus] = useState<string>('');
   const [showClearModal, setShowClearModal] = useState(false);
+  const leadTimeOptions = [5, 10, 15, 30];
 
   useEffect(() => {
     checkNotificationPermission();
@@ -125,9 +128,12 @@ export default function SettingsScreen() {
     }
 
     if (!enabled) {
-      await notificationService.cancelAllArtistNotifications();
+      await notificationService.cancelAllFavoriteNotifications();
     }
   };
+
+  const isNotificationsDisabled = !isNotificationEnabled;
+  const isLeadTimeDisabled = isNotificationsDisabled || !favoriteArtistsNotifications;
 
   return (
     <>
@@ -179,13 +185,13 @@ export default function SettingsScreen() {
               )}
             </View>
 
-            <View style={styles.settingRow}>
+            <View style={[styles.settingRow, isNotificationsDisabled && styles.settingRowDisabled]}>
               <View style={styles.settingContent}>
                 <Text style={[globalStyles.heading, styles.settingTitle]}>
-                  Upozornění na oblíbené interprety
+                  Upozornění na oblíbené koncerty
                 </Text>
                 <Text style={[globalStyles.text, styles.settingDescription]}>
-                  Upozornění 10 minut před začátkem koncertu
+                  Upozornění {favoriteArtistsNotificationLeadMinutes} minut před začátkem koncertu
                 </Text>
               </View>
               <Switch
@@ -198,7 +204,46 @@ export default function SettingsScreen() {
               />
             </View>
 
-            <View style={styles.settingRow}>
+            <View style={[styles.settingRow, styles.settingRowColumn, isLeadTimeDisabled && styles.settingRowDisabled]}>
+              <View style={styles.settingContent}>
+                <Text style={[globalStyles.heading, styles.settingTitle]}>
+                  Předstih notifikace
+                </Text>
+                <Text style={[globalStyles.text, styles.settingDescription]}>
+                  Vyber, kolik minut před začátkem chceš upozornění
+                </Text>
+              </View>
+              <View style={styles.leadTimeOptions}>
+                {leadTimeOptions.map((minutes) => {
+                  const isSelected = minutes === favoriteArtistsNotificationLeadMinutes;
+                  return (
+                    <TouchableOpacity
+                      key={minutes}
+                      style={[
+                        styles.leadTimeOption,
+                        isSelected && styles.leadTimeOptionActive,
+                        isLeadTimeDisabled && styles.leadTimeOptionDisabled,
+                      ]}
+                      onPress={() => setFavoriteArtistsNotificationLeadMinutes(minutes)}
+                      activeOpacity={0.7}
+                      disabled={isLeadTimeDisabled}
+                    >
+                      <Text
+                        style={[
+                          globalStyles.heading,
+                          styles.leadTimeOptionText,
+                          isSelected && styles.leadTimeOptionTextActive,
+                        ]}
+                      >
+                        {minutes} min
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+
+            <View style={[styles.settingRow, isNotificationsDisabled && styles.settingRowDisabled]}>
               <View style={styles.settingContent}>
                 <Text style={[globalStyles.heading, styles.settingTitle]}>
                   Důležitá festivalová upozornění
@@ -390,10 +435,43 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 16,
   },
+  settingRowColumn: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+  },
+  settingRowDisabled: {
+    opacity: 0.6,
+  },
   settingTitle: {
     marginBottom: 4,
   },
   settingDescription: {},
+  leadTimeOptions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  leadTimeOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#1A3B5A',
+    borderWidth: 1,
+    borderColor: '#EA5178',
+  },
+  leadTimeOptionActive: {
+    backgroundColor: '#EA5178',
+    borderColor: '#EA5178',
+  },
+  leadTimeOptionDisabled: {
+    opacity: 0.7,
+  },
+  leadTimeOptionText: {
+    fontSize: 12,
+  },
+  leadTimeOptionTextActive: {
+    color: '#FFFFFF',
+  },
   actionRow: {
     backgroundColor: '#0A3652',
     padding: 16,

@@ -3,6 +3,7 @@ import * as Linking from 'expo-linking';
 export type RootStackParamList = {
   HomeMain: undefined;
   ProgramMain: undefined;
+  ProgramHorizontal: undefined;
   ArtistsMain: undefined;
   FavoritesMain: undefined;
   InfoMain: undefined;

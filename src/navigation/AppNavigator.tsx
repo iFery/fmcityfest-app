@@ -25,6 +25,7 @@ export { navigationRef };
  */
 export function navigate(name: 'HomeMain'): void;
 export function navigate(name: 'ProgramMain'): void;
+export function navigate(name: 'ProgramHorizontal'): void;
 export function navigate(name: 'ArtistsMain'): void;
 export function navigate(name: 'FavoritesMain'): void;
 export function navigate(name: 'InfoMain'): void;

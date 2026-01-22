@@ -18,7 +18,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/cs';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
 import Header from '../components/Header';
-import { useFavoritesStore } from '../stores/favoritesStore';
+import { useFavorites } from '../hooks/useFavorites';
 import { useNotificationPreferencesStore } from '../stores/notificationPreferencesStore';
 import { clearAllCache, getCacheAge } from '../utils/cacheManager';
 import { remoteConfigService } from '../services/remoteConfig';
@@ -39,7 +39,7 @@ interface CacheInfo {
 const CACHE_KEYS = ['events', 'timeline', 'artists', 'news', 'partners', 'faq'];
 
 export default function DebugScreen() {
-  const { favoriteEvents, favoriteArtists } = useFavoritesStore();
+  const { favoriteEvents, favoriteArtists } = useFavorites();
   const {
     favoriteArtistsNotifications,
     importantFestivalNotifications,

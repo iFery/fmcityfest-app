@@ -57,6 +57,7 @@ export function validateNavigationParams(
 
     case 'HomeMain':
     case 'ProgramMain':
+    case 'ProgramHorizontal':
     case 'ArtistsMain':
     case 'FavoritesMain':
     case 'InfoMain':
@@ -106,5 +107,4 @@ export function sanitizeNavigationParams(
       return params;
   }
 }
-
 

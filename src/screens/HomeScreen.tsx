@@ -19,8 +19,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { RootStackParamList } from '../navigation/linking';
 import { TabParamList } from '../navigation/TabNavigator';
 import { usePartners } from '../hooks/usePartners';
+import { useNews } from '../hooks/useNews';
 import { remoteConfigService } from '../services/remoteConfig';
 import { useTheme } from '../theme/ThemeProvider';
+import type { News } from '../types';
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>,
@@ -30,6 +32,7 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { partners, loading, error } = usePartners();
+  const { news, loading: newsLoading, error: newsError } = useNews();
   const [festivalEdition, setFestivalEdition] = useState<string>('7. ročník');
   const [festivalDate, setFestivalDate] = useState<string>('');
   const { globalStyles } = useTheme();
@@ -78,6 +81,31 @@ export default function HomeScreen() {
   const mainPartners = useMemo(() => {
     return partners.filter(p => p.category === 'Generální partneři');
   }, [partners]);
+
+  const latestNews = useMemo(() => {
+    return [...news]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 3);
+  }, [news]);
+
+  const formatNewsDate = (dateString: string) => {
+    try {
+      return new Date(dateString).toLocaleDateString('cs-CZ', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+    } catch {
+      return dateString;
+    }
+  };
+
+  const handleNewsPress = (newsItem: News) => {
+    navigation.navigate('NewsDetail', {
+      newsId: newsItem.id,
+      newsTitle: newsItem.title,
+    });
+  };
 
   const tiles = [
     { label: 'Program', icon: 'calendar' as const, onPress: () => {
@@ -186,6 +214,56 @@ export default function HomeScreen() {
                   <Text style={[globalStyles.heading, styles.showAllBtnText]}>Zobrazit všechny partnery</Text>
                 </TouchableOpacity>
               </View>
+
+              {/* Sekce Novinky */}
+              <View style={styles.newsSection}>
+                <Text style={[globalStyles.heading, styles.newsTitle]}>Nejnovější novinky</Text>
+                {newsLoading ? (
+                  <ActivityIndicator color="#21AAB0" style={styles.loadingIndicator} />
+                ) : newsError ? (
+                  <Text style={styles.errorText}>{newsError}</Text>
+                ) : latestNews.length === 0 ? (
+                  <Text style={styles.errorText}>Žádné novinky nejsou k dispozici</Text>
+                ) : (
+                  <View style={styles.newsList}>
+                    {latestNews.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.newsCard}
+                        onPress={() => handleNewsPress(item)}
+                        activeOpacity={0.85}
+                      >
+                        {item.image_url ? (
+                          <Image
+                            source={{ uri: item.image_url }}
+                            style={styles.newsImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <View style={styles.newsImagePlaceholder} />
+                        )}
+                        <View style={styles.newsCardContent}>
+                          <Text
+                            style={[globalStyles.heading, styles.newsCardTitle]}
+                            numberOfLines={2}
+                          >
+                            {item.title}
+                          </Text>
+                          <Text style={[globalStyles.subtitle, styles.newsCardDate]}>
+                            {formatNewsDate(item.date)}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.showAllBtn}
+                  onPress={() => navigation.navigate('News')}
+                >
+                  <Text style={[globalStyles.heading, styles.showAllBtnText]}>Zobrazit všechny novinky</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </ScrollView>
         </ImageBackground>
@@ -238,7 +316,6 @@ const styles = StyleSheet.create({
     width: '48%',
     height: 130,
     backgroundColor: '#0A3652',
-    borderRadius: 0,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 15,
@@ -273,12 +350,12 @@ const styles = StyleSheet.create({
   partnerBox: {
     width: '50%',
     aspectRatio: 2.8,
-    backgroundColor: 'transparent',
     borderWidth: 1,
     borderColor: '#224259',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 0,
+    backgroundColor: '#0A3652',
   },
   partnerLogo: {
     width: '90%',
@@ -300,6 +377,50 @@ const styles = StyleSheet.create({
     marginVertical: 20,
     fontSize: 16,
   },
+  newsSection: {
+    marginTop: 30,
+    marginBottom: 10,
+  },
+  newsTitle: {
+    color: 'white',
+    fontSize: 18,
+    marginBottom: 16,
+    marginLeft: 2,
+    textAlign: 'center',
+  },
+  newsList: {
+    gap: 12,
+  },
+  newsCard: {
+    backgroundColor: '#0A3652',
+    flexDirection: 'row',
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#163F59',
+  },
+  newsImage: {
+    width: 110,
+    height: 90,
+  },
+  newsImagePlaceholder: {
+    width: 110,
+    height: 90,
+    backgroundColor: '#0F2F44',
+  },
+  newsCardContent: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'space-between',
+  },
+  newsCardTitle: {
+    color: 'white',
+    fontSize: 15,
+    marginBottom: 6,
+  },
+  newsCardDate: {
+    color: '#21AAB0',
+    fontSize: 12,
+  },
   placeholderContainer: {
     width: '100%',
     height: '100%',
@@ -314,4 +435,3 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 });
-

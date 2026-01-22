@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   StatusBar,
   TouchableOpacity,
+  Animated,
 } from 'react-native';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -22,8 +23,10 @@ import NotificationPermissionModal from '../components/NotificationPermissionMod
 import { useNotificationPrompt } from '../hooks/useNotificationPrompt';
 import { useEvents } from '../hooks/useEvents';
 import { useFavorites } from '../hooks/useFavorites';
+import { useFavoriteFeedback } from '../hooks/useFavoriteFeedback';
 import { useTimeline } from '../contexts/TimelineContext';
 import Header from '../components/Header';
+import Toast from '../components/Toast';
 import { useTheme } from '../theme/ThemeProvider';
 
 dayjs.locale('cs');
@@ -51,7 +54,7 @@ export default function ProgramScreen() {
   const { globalStyles } = useTheme();
   const navigation = useNavigation<ProgramScreenNavigationProp>();
   const { loading, error } = useEvents();
-  const { favoriteEvents } = useFavorites();
+  const { favoriteEvents, toggleEvent, isEventFavorite } = useFavorites();
   const previousTabRef = useRef<string | null>(null);
 
   useFocusEffect(
@@ -89,6 +92,25 @@ export default function ProgramScreen() {
       triggerOnScroll: true,
     });
 
+  const [helpExpanded, setHelpExpanded] = useState(false);
+  const [helpVisible, setHelpVisible] = useState(false);
+  const helpOpacity = useRef(new Animated.Value(0)).current;
+  const helpScale = useRef(new Animated.Value(0.98)).current;
+  const helpTranslate = useRef(new Animated.Value(6)).current;
+
+  const {
+    toastVisible,
+    toastMessage,
+    toastDuration,
+    toastAction,
+    permissionModalVisible,
+    handleFavoriteAdded,
+    handleFavoriteRemoved,
+    handlePermissionAccept,
+    handlePermissionDismiss,
+    hideToast,
+  } = useFavoriteFeedback({ promptStyle: 'toast-action' });
+
   const { timelineData, loading: timelineLoading, refetch: refetchTimeline } = useTimeline();
   const [day, setDay] = useState<'dayOne' | 'dayTwo'>('dayOne');
 
@@ -116,6 +138,50 @@ export default function ProgramScreen() {
       setDay('dayOne');
     }
   }, [timelineData]);
+
+  useEffect(() => {
+    if (helpExpanded) {
+      setHelpVisible(true);
+      Animated.parallel([
+        Animated.timing(helpOpacity, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(helpScale, {
+          toValue: 1,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+        Animated.timing(helpTranslate, {
+          toValue: 0,
+          duration: 180,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      return;
+    }
+
+    Animated.parallel([
+      Animated.timing(helpOpacity, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(helpScale, {
+        toValue: 0.98,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+      Animated.timing(helpTranslate, {
+        toValue: 6,
+        duration: 150,
+        useNativeDriver: true,
+      }),
+    ]).start(({ finished }) => {
+      if (finished) setHelpVisible(false);
+    });
+  }, [helpExpanded, helpOpacity, helpScale, helpTranslate]);
 
   const timelineEvents = useMemo((): TimelineEvent[] => {
     if (!timelineData) return [];
@@ -313,6 +379,18 @@ export default function ProgramScreen() {
                           <TouchableOpacity
                             key={`${event.id}-${i}`}
                             onPress={() => handleEventPress(event)}
+                            onLongPress={async () => {
+                              if (!event.id) return;
+                              const wasFavorite = isEventFavorite(event.id);
+                              toggleEvent(event.id);
+                              const label = event.name || event.artist || 'Koncert';
+                              if (!wasFavorite) {
+                                await handleFavoriteAdded(label);
+                              } else {
+                                await handleFavoriteRemoved(label);
+                              }
+                            }}
+                            delayLongPress={350}
                             style={[
                               styles.eventBlock,
                               {
@@ -352,12 +430,56 @@ export default function ProgramScreen() {
               })}
             </View>
           </ScrollView>
+          <View style={styles.experimentalLinkWrapper}>
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ProgramHorizontal')}
+              activeOpacity={0.75}
+            >
+              <Text style={[styles.experimentalLinkText, globalStyles.caption]}>
+                👀 Zkus nový layout
+              </Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
+        <View style={styles.helpContainer} pointerEvents="box-none">
+          <TouchableOpacity
+            style={styles.helpButton}
+            onPress={() => setHelpExpanded((prev) => !prev)}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="help-circle-outline" size={22} color="#FFFFFF" />
+          </TouchableOpacity>
+          {helpVisible && (
+            <Animated.View
+              style={[
+                styles.helpBubble,
+                {
+                  opacity: helpOpacity,
+                  transform: [{ translateY: helpTranslate }, { scale: helpScale }],
+                },
+              ]}
+            >
+              <Text style={styles.helpText}>Podrž koncert a přidej ho do Můj program.</Text>
+            </Animated.View>
+          )}
+        </View>
       </View>
       <NotificationPermissionModal
         visible={showPrompt}
         onAllowNotifications={handleAccept}
         onDismiss={handleDismiss}
+      />
+      <Toast
+        visible={toastVisible}
+        message={toastMessage}
+        onDismiss={hideToast}
+        duration={toastDuration}
+        actionButton={toastAction}
+      />
+      <NotificationPermissionModal
+        visible={permissionModalVisible}
+        onAllowNotifications={handlePermissionAccept}
+        onDismiss={handlePermissionDismiss}
       />
     </>
   );
@@ -499,5 +621,45 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 4,
     right: 4,
+  },
+  helpContainer: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    flexDirection: 'row-reverse',
+    alignItems: 'flex-end',
+  },
+  helpButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#D14D75',
+    borderWidth: 1,
+    borderColor: '#e24574',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  helpBubble: {
+    backgroundColor: '#D14D75',
+    borderRadius: 18,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#e24574',
+    maxWidth: 220,
+  },
+  helpText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+  },
+  experimentalLinkWrapper: {
+    marginTop: 18,
+    marginBottom: 10,
+    alignItems: 'center',
+  },
+  experimentalLinkText: {
+    color: '#7CDDE4',
+    textDecorationLine: 'underline',
   },
 });

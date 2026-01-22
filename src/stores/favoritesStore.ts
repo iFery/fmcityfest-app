@@ -14,6 +14,7 @@ interface FavoritesStore {
   isEventFavorite: (eventId: string) => boolean;
   isArtistFavorite: (artistId: string) => boolean;
   clearAll: () => void;
+  clearLegacyArtists: () => void;
 }
 
 export const useFavoritesStore = create<FavoritesStore>()(
@@ -58,6 +59,11 @@ export const useFavoritesStore = create<FavoritesStore>()(
           favoriteArtists: [],
         });
       },
+      clearLegacyArtists: () => {
+        set({
+          favoriteArtists: [],
+        });
+      },
     }),
     {
       name: 'favorites-storage',
@@ -65,4 +71,3 @@ export const useFavoritesStore = create<FavoritesStore>()(
     }
   )
 );
-

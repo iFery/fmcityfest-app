@@ -9,8 +9,10 @@ import { debouncedStorage } from '../utils/debouncedStorage';
 interface NotificationPreferencesStore {
   favoriteArtistsNotifications: boolean;
   importantFestivalNotifications: boolean;
+  favoriteArtistsNotificationLeadMinutes: number;
   setFavoriteArtistsNotifications: (enabled: boolean) => void;
   setImportantFestivalNotifications: (enabled: boolean) => void;
+  setFavoriteArtistsNotificationLeadMinutes: (minutes: number) => void;
 }
 
 export const useNotificationPreferencesStore = create<NotificationPreferencesStore>()(
@@ -18,6 +20,7 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
     (set) => ({
       favoriteArtistsNotifications: true,
       importantFestivalNotifications: true,
+      favoriteArtistsNotificationLeadMinutes: 10,
 
       setFavoriteArtistsNotifications: (enabled: boolean) => {
         set({ favoriteArtistsNotifications: enabled });
@@ -26,6 +29,10 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
       setImportantFestivalNotifications: (enabled: boolean) => {
         set({ importantFestivalNotifications: enabled });
       },
+
+      setFavoriteArtistsNotificationLeadMinutes: (minutes: number) => {
+        set({ favoriteArtistsNotificationLeadMinutes: minutes });
+      },
     }),
     {
       name: 'notification-preferences-storage',
@@ -33,6 +40,5 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
     }
   )
 );
-
 
 

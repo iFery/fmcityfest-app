@@ -14,7 +14,7 @@ const withIosAppConfig = (config) => {
 
     // App Display Name (CFBundleDisplayName)
     // This is the name shown under the app icon on iOS home screen
-    modResults.CFBundleDisplayName = 'FM FICY FEST';
+    modResults.CFBundleDisplayName = 'FM CITY FEST';
 
     // App Category (LSApplicationCategoryType)
     // Category for App Store (Sports)
