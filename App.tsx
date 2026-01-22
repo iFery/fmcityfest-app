@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, StyleSheet, StatusBar, Animated, Image, Easing, Platform } from 'react-native';
+import { View, StyleSheet, Animated, Easing, Platform, Image, StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { useFonts } from 'expo-font';
+import * as SplashScreen from 'expo-splash-screen';
 import {
   Raleway_400Regular,
   Raleway_500Medium,
@@ -17,105 +18,64 @@ import { UpdateScreen } from './src/screens/UpdateScreen';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import * as NavigationBar from 'expo-navigation-bar';
 
-const MIN_LOADING_TIME = 300;
-const FADE_DURATION = 300;
+// Keep native splash visible until we explicitly hide it
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Ignore if it was already prevented
+});
 
-function LoadingScreen() {
-  const logoImage = require('./assets/logo.png');
-
-  return (
-    <View style={styles.container}>
-      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-      <View style={styles.content}>
-        <Image source={logoImage} style={styles.logo} resizeMode="contain" />
-      </View>
-    </View>
-  );
-}
-
-function AppContent() {
+function AppContent({ fontsReady }: { fontsReady: boolean }) {
   const { state, updateInfo, skipUpdate } = useBootstrap();
-  const loadingOpacity = useRef(new Animated.Value(1)).current;
+  const hasHiddenSplash = useRef(false);
+  const [rootLayoutDone, setRootLayoutDone] = useState(false);
   const appOpacity = useRef(new Animated.Value(0)).current;
-  const updateScreenOpacity = useRef(new Animated.Value(0)).current;
-  const [showLoading, setShowLoading] = useState(true);
-  const [showApp, setShowApp] = useState(false);
-  const [showUpdateScreen, setShowUpdateScreen] = useState(false);
-  const loadingStartTime = useRef<number | null>(null);
 
   const isLoading = state === 'loading';
   const isBlocked = state === 'offline-blocked';
   const isUpdateRequired = state === 'update-required';
   const isUpdateOptional = state === 'update-optional';
   const isReady = state === 'ready-online' || state === 'ready-offline';
+  const shouldShowUpdate = (isUpdateRequired || isUpdateOptional) && updateInfo;
+  const shouldShowLoading = !isReady && !isBlocked && !shouldShowUpdate;
+  const canHideSplash = fontsReady && (isReady || shouldShowUpdate || isBlocked);
 
   // Debug logging
   useEffect(() => {
-    console.log('[AppContent] State changed:', { state, updateInfo, showUpdateScreen });
-  }, [state, updateInfo, showUpdateScreen]);
+    console.log('[AppContent] State changed:', { state, updateInfo, fontsReady });
+  }, [state, updateInfo, fontsReady]);
 
-  // Handle update screen fade-in
+  // Hide native splash only when we can render a first frame
   useEffect(() => {
-    if ((isUpdateRequired || isUpdateOptional) && updateInfo && !showUpdateScreen) {
-      console.log('[AppContent] Setting up update screen animation');
-      setShowUpdateScreen(true);
-      // Fade out loading screen, fade in update screen
-      Animated.parallel([
-        Animated.timing(loadingOpacity, {
-          toValue: 0,
-          duration: FADE_DURATION,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(updateScreenOpacity, {
-          toValue: 1,
-          duration: FADE_DURATION,
-          easing: Easing.out(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setShowLoading(false);
-        console.log('[AppContent] Update screen animation completed');
-      });
-    }
-  }, [isUpdateRequired, isUpdateOptional, updateInfo, showUpdateScreen, updateScreenOpacity, loadingOpacity]);
-
-  // Handle loading screen timing
-  useEffect(() => {
-    if (isLoading && loadingStartTime.current === null) {
-      loadingStartTime.current = Date.now();
-    }
-  }, [isLoading]);
-
-  // Handle app fade-in when ready (not showing update screen)
-  useEffect(() => {
-    if (!isLoading && isReady && showLoading && !showApp && !isUpdateRequired && !isUpdateOptional) {
-      const now = Date.now();
-      const elapsed = loadingStartTime.current ? now - loadingStartTime.current : 0;
-      const remainingTime = Math.max(0, MIN_LOADING_TIME - elapsed);
-
-      setTimeout(() => {
-        setShowApp(true);
-
-        Animated.parallel([
-          Animated.timing(loadingOpacity, {
-            toValue: 0,
-            duration: FADE_DURATION,
-            easing: Easing.out(Easing.ease),
-            useNativeDriver: true,
-          }),
+    if (!rootLayoutDone || !canHideSplash || hasHiddenSplash.current) return;
+    SplashScreen.hideAsync()
+      .then(() => {
+        hasHiddenSplash.current = true;
+        if (isReady) {
           Animated.timing(appOpacity, {
             toValue: 1,
-            duration: FADE_DURATION,
+            duration: 260,
             easing: Easing.out(Easing.ease),
             useNativeDriver: true,
-          }),
-        ]).start(() => {
-          setShowLoading(false);
-        });
-      }, remainingTime);
-    }
-  }, [isLoading, isReady, showLoading, showApp, isUpdateRequired, isUpdateOptional, loadingOpacity, appOpacity]);
+          }).start();
+        } else {
+          appOpacity.setValue(1);
+        }
+      })
+      .catch(() => {
+        // Ignore and retry on next state/layout change
+      });
+  }, [rootLayoutDone, canHideSplash, isReady, appOpacity]);
+
+  useEffect(() => {
+    if (!isReady) return;
+    if (!hasHiddenSplash.current) return;
+    // In case readiness changes after splash is already hidden
+    Animated.timing(appOpacity, {
+      toValue: 1,
+      duration: 260,
+      easing: Easing.out(Easing.ease),
+      useNativeDriver: true,
+    }).start();
+  }, [isReady, appOpacity]);
 
   // Handle optional update skip (when user clicks "Later")
   const handleUpdateLater = async () => {
@@ -130,80 +90,41 @@ function AppContent() {
   };
 
   // Update screen - show for forced or optional updates
-  if ((isUpdateRequired || isUpdateOptional) && updateInfo && showUpdateScreen) {
+  if (shouldShowUpdate) {
     return (
-      <View style={styles.appContainer}>
-        <Animated.View
-          style={[
-            styles.updateWrapper,
-            {
-              opacity: updateScreenOpacity,
-            },
-          ]}
-          pointerEvents="auto"
-        >
-          <UpdateScreen
-            updateInfo={updateInfo}
-            onUpdate={handleUpdate}
-            onLater={isUpdateOptional ? handleUpdateLater : undefined}
-          />
-        </Animated.View>
-        {/* Keep loading screen behind for smooth transition */}
-        {showLoading && (
-          <Animated.View
-            style={[
-              styles.loadingWrapper,
-              {
-                opacity: loadingOpacity,
-              },
-            ]}
-            pointerEvents="none"
-          >
-            <LoadingScreen />
-          </Animated.View>
-        )}
+      <View style={styles.appContainer} onLayout={() => setRootLayoutDone(true)}>
+        <UpdateScreen
+          updateInfo={updateInfo}
+          onUpdate={handleUpdate}
+          onLater={isUpdateOptional ? handleUpdateLater : undefined}
+        />
       </View>
     );
   }
 
   // Offline blocked - show blocking screen only
   if (isBlocked) {
-    return <OfflineBlockedScreen />;
+    return (
+      <View style={styles.appContainer} onLayout={() => setRootLayoutDone(true)}>
+        <OfflineBlockedScreen />
+      </View>
+    );
   }
 
-  // Loading or ready states
+  // Ready state
   return (
-    <View style={styles.appContainer}>
-      {showApp && isReady && (
+    <View style={styles.appContainer} onLayout={() => setRootLayoutDone(true)}>
+      {isReady && (
         <Animated.View
           testID="app-navigator"
-          style={[
-            styles.appWrapper,
-            {
-              opacity: appOpacity,
-            },
-          ]}
-          pointerEvents={showLoading ? 'none' : 'auto'}
+          style={[styles.appWrapper, { opacity: appOpacity }]}
         >
           <ErrorBoundary>
             <AppNavigator />
           </ErrorBoundary>
         </Animated.View>
       )}
-      
-      {showLoading && (
-        <Animated.View
-          style={[
-            styles.loadingWrapper,
-            {
-              opacity: loadingOpacity,
-            },
-          ]}
-          pointerEvents="auto"
-        >
-          <LoadingScreen />
-        </Animated.View>
-      )}
+      {shouldShowLoading && <LoadingScreen />}
     </View>
   );
 }
@@ -250,24 +171,23 @@ function AppContentWithFonts() {
     return () => clearTimeout(timeout);
   }, [fontsLoaded, fontError]);
 
-  // Dokud se fonty nenačtou (a neproběhne timeout), drž loading
-  if (!fontsLoaded && !fontsTimeout && !fontError) {
-    return <LoadingScreen />;
-  }
+  const fontsReady = fontsLoaded || fontsTimeout || !!fontError;
 
   return (
-    <ThemeProvider>
-      <AppContentWithTimeline />
-    </ThemeProvider>
+    <View style={styles.appContainer}>
+      <ThemeProvider>
+        <AppContentWithTimeline fontsReady={fontsReady} />
+      </ThemeProvider>
+    </View>
   );
 }
 
-function AppContentWithTimeline() {
+function AppContentWithTimeline({ fontsReady }: { fontsReady: boolean }) {
   const { timelineData } = useBootstrap();
 
   return (
     <TimelineProvider initialData={timelineData}>
-      <AppContent />
+      <AppContent fontsReady={fontsReady} />
     </TimelineProvider>
   );
 }
@@ -278,12 +198,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#002239',
   },
   appWrapper: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  loadingWrapper: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  updateWrapper: {
     ...StyleSheet.absoluteFillObject,
   },
   container: {
@@ -300,3 +214,16 @@ const styles = StyleSheet.create({
     height: 140,
   },
 });
+
+function LoadingScreen() {
+  const logoImage = require('./assets/logo-lg.png');
+
+  return (
+    <View style={styles.container}>
+      <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
+      <View style={styles.content}>
+        <Image source={logoImage} style={styles.logo} resizeMode="contain" />
+      </View>
+    </View>
+  );
+}
