@@ -162,8 +162,14 @@ module.exports = ({ config }) => {
   const androidGoogleServicesFile = './google-services.json';
   const iosGoogleServicesFile = './GoogleService-Info.plist';
 
+
+  const enableFirebase = process.env.SKIP_FIREBASE !== '1';
+
   return {
     ...config,
+    ios: {
+      appDelegateLanguage: 'objc',
+    },
     expo: {
       ...config.expo,
       name: 'FM CITY FEST',
@@ -182,7 +188,6 @@ module.exports = ({ config }) => {
       ios: {
         supportsTablet: false,
         bundleIdentifier: 'com.fmcityfest.app',
-        deploymentTarget: '15.1',
         googleServicesFile: iosGoogleServicesFile,
       },
       android: {
@@ -231,17 +236,24 @@ module.exports = ({ config }) => {
             sounds: [],
           },
         ],
-        [
-          '@react-native-firebase/app',
-          {
-            android: {
-              googleServicesFile: androidGoogleServicesFile,
-            },
-            ios: {
-              googleServicesFile: iosGoogleServicesFile,
-            },
-          },
-        ],
+
+        ...(enableFirebase
+          ? [
+              [
+                '@react-native-firebase/app',
+                {
+                  android: {
+                    googleServicesFile: androidGoogleServicesFile,
+                  },
+                  ios: {
+                    googleServicesFile: iosGoogleServicesFile,
+                  },
+                },
+              ],
+              './plugins/withSwiftFirebaseAppDelegate.js',
+            ]
+          : []),
+
         // Custom plugin to ensure AD_ID permission is added to AndroidManifest.xml
         './plugins/withAndroidAdIdPermission.js',
         // Custom plugin to configure iOS app settings (display name, category, capabilities)
