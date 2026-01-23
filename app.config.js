@@ -262,6 +262,8 @@ module.exports = ({ config }) => {
         './plugins/withAndroidSigning.js',
         // Custom plugin to add Firebase Crashlytics Gradle plugin
         './plugins/withAndroidCrashlytics.js',
+        // Custom plugin to fix AndroidManifest merge conflict for FCM notification color
+        './plugins/withAndroidManifestFix.js',
       ],
       extra: {
         eas: {
