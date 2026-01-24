@@ -4,11 +4,11 @@ export interface SubmitFeedbackPayload {
   feedbackType: string;
   comment: string;
   email?: string;
-  photos?: Array<{
+  photos?: {
     uri: string;
     mimeType?: string;
     fileName?: string;
-  }>;
+  }[];
   appVersion?: string;
   buildNumber?: string;
   platform?: string;
@@ -97,7 +97,7 @@ export async function submitFeedback(payload: SubmitFeedbackPayload): Promise<Fe
         if (parsedMessage) {
           message = parsedMessage;
         }
-      } catch (_jsonError) {
+      } catch {
         const trimmed = rawBody.replace(/<[^>]+>/g, '').trim();
         if (trimmed) {
           message = trimmed;

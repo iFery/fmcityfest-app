@@ -129,7 +129,7 @@ export default function FeedbackScreen() {
         }
       }
       setErrorMessage(null);
-    } catch (error) {
+    } catch {
       setErrorMessage('Výběr fotky selhal. Zkus to prosím znovu.');
     }
   };

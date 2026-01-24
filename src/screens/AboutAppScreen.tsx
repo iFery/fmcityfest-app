@@ -40,7 +40,7 @@ function formatDate(value?: string | number | Date | null) {
 
   try {
     return new Intl.DateTimeFormat('cs-CZ', { dateStyle: 'long' }).format(date);
-  } catch (_error) {
+  } catch {
     return date.toLocaleDateString('cs-CZ');
   }
 }
