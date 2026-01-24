@@ -24,7 +24,8 @@ const getLeadTimeMinutes = () => {
  */
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
     shouldPlaySound: true,
     shouldSetBadge: true,
   }),
@@ -160,6 +161,11 @@ class NotificationService {
         return false;
       }
 
+      // If user just granted system notifications, enable in-app notification toggles
+      const notificationPreferences = useNotificationPreferencesStore.getState();
+      notificationPreferences.setFavoriteArtistsNotifications(true);
+      notificationPreferences.setImportantFestivalNotifications(true);
+
       // Pro Android je potřeba ještě nastavit notification channel
       if (Platform.OS === 'android') {
         await Notifications.setNotificationChannelAsync('default', {
@@ -227,7 +233,9 @@ class NotificationService {
           },
         },
         trigger: {
-          seconds: seconds,
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds,
+          repeats: false,
         },
       });
       console.log(`Test notification scheduled for ${seconds} seconds`);
@@ -435,8 +443,8 @@ class NotificationService {
                   name: 'Default',
                   importance: Notifications.AndroidImportance.MAX,
                   vibrationPattern: [0, 250, 250, 250],
-                  lightColor: '#FF231F7C',
-                  sound: true,
+                  lightColor: '#002239',
+                  sound: 'default',
                 });
               } catch {
                 // Ignore channel errors

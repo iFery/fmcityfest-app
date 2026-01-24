@@ -72,11 +72,11 @@ describe('updateService.checkForUpdate', () => {
 
   it('returns forced update when below minimum and force enabled', async () => {
     mockedNetInfo.fetch.mockResolvedValue({ isInternetReachable: true } as any);
-    mockedRemoteConfig.getString.mockImplementation((key: string, fallback: string) => {
+    mockedRemoteConfig.getString.mockImplementation((key: string, fallback?: string) => {
       if (key === 'latest_app_version') return '1.2.0';
       if (key === 'min_required_version') return '1.1.0';
       if (key === 'update_whats_new') return '["A","B"]';
-      return fallback;
+      return fallback ?? '';
     });
     mockedRemoteConfig.getBoolean.mockReturnValue(true);
 
@@ -94,11 +94,11 @@ describe('updateService.checkForUpdate', () => {
       android: { package: 'com.fmcityfest.app' },
     } as any;
 
-    mockedRemoteConfig.getString.mockImplementation((key: string, fallback: string) => {
+    mockedRemoteConfig.getString.mockImplementation((key: string, fallback?: string) => {
       if (key === 'latest_app_version') return '1.2.0';
       if (key === 'min_required_version') return '1.0.0';
       if (key === 'update_whats_new') return 'foo, bar';
-      return fallback;
+      return fallback ?? '';
     });
     mockedRemoteConfig.getBoolean.mockReturnValue(false);
 
@@ -116,10 +116,10 @@ describe('updateService.checkForUpdate', () => {
       android: { package: 'com.fmcityfest.app' },
     } as any;
 
-    mockedRemoteConfig.getString.mockImplementation((key: string, fallback: string) => {
+    mockedRemoteConfig.getString.mockImplementation((key: string, fallback?: string) => {
       if (key === 'latest_app_version') return '1.2.0';
       if (key === 'min_required_version') return '1.0.0';
-      return fallback;
+      return fallback ?? '';
     });
     mockedRemoteConfig.getBoolean.mockReturnValue(false);
 

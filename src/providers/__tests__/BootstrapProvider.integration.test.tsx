@@ -4,6 +4,7 @@
  */
 
 import React from 'react';
+import { View } from 'react-native';
 import { render, waitFor, screen, fireEvent } from '@testing-library/react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { preloadAllData } from '../../services/preloadService';
@@ -29,8 +30,6 @@ const mockedGetOldestCacheAge = getOldestCacheAge as jest.MockedFunction<typeof 
 
 // Mock AppNavigator to return a simple test component
 (AppNavigator as jest.Mock).mockImplementation(() => {
-  const React = require('react');
-  const { View } = require('react-native');
   return React.createElement(View, { testID: 'app-navigator' }, 'App Content');
 });
 
@@ -212,4 +211,3 @@ describe('BootstrapProvider - Integration Tests', () => {
     });
   });
 });
-

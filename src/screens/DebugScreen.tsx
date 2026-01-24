@@ -49,7 +49,7 @@ export default function DebugScreen() {
   const [asyncStorageKeysCount, setAsyncStorageKeysCount] = useState<number>(0);
   const [notificationPermission, setNotificationPermission] = useState<string>('');
   const [scheduledNotifications, setScheduledNotifications] = useState<Notifications.NotificationRequest[]>([]);
-  const [remoteConfigValues, setRemoteConfigValues] = useState<Record<string, string>>({});
+  const [remoteConfigValues, setRemoteConfigValues] = useState<Record<string, string | number | boolean>>({});
   const [firebaseProjectId, setFirebaseProjectId] = useState<string | null>(null);
 
   const loadCacheInfo = React.useCallback(async () => {
@@ -162,7 +162,7 @@ export default function DebugScreen() {
           body: 'Tato notifikace byla naplánována na 30 sekund dopředu.',
         },
         trigger: {
-          type: 'timeInterval',
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds: 30,
           repeats: false,
         },

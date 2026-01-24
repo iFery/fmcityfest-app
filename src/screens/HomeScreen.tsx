@@ -22,6 +22,8 @@ import { usePartners } from '../hooks/usePartners';
 import { useNews } from '../hooks/useNews';
 import { remoteConfigService } from '../services/remoteConfig';
 import { useTheme } from '../theme/ThemeProvider';
+import { logEvent } from '../services/analytics';
+import { useScreenView } from '../hooks/useScreenView';
 import type { News } from '../types';
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
@@ -36,6 +38,7 @@ export default function HomeScreen() {
   const [festivalEdition, setFestivalEdition] = useState<string>('7. ročník');
   const [festivalDate, setFestivalDate] = useState<string>('');
   const { globalStyles } = useTheme();
+  useScreenView('Home');
 
   useEffect(() => {
     // Načtení ročníku z Remote Config
@@ -101,6 +104,7 @@ export default function HomeScreen() {
   };
 
   const handleNewsPress = (newsItem: News) => {
+    logEvent('news_open', { news_id: newsItem.id, source: 'home_latest' });
     navigation.navigate('NewsDetail', {
       newsId: newsItem.id,
       newsTitle: newsItem.title,
@@ -108,20 +112,45 @@ export default function HomeScreen() {
   };
 
   const tiles = [
-    { label: 'Program', icon: 'calendar' as const, onPress: () => {
-      const parent = navigation.getParent();
-      if (parent) {
-        (parent as BottomTabNavigationProp<TabParamList>).navigate('Program');
-      }
-    }},
-    { label: 'Mapa', icon: 'map' as const, onPress: () => {
-      navigation.navigate('Map');
-    }},
-    { label: 'Časté dotazy', icon: 'help-circle' as const, onPress: () => {
-      navigation.navigate('FAQ');
-    }},
-    { label: 'Novinky', icon: 'newspaper' as const, onPress: () => navigation.navigate('News') },
+    {
+      label: 'Program',
+      icon: 'calendar' as const,
+      destination: 'Program',
+      onPress: () => {
+        const parent = navigation.getParent();
+        if (parent) {
+          (parent as BottomTabNavigationProp<TabParamList>).navigate('Program');
+        }
+      },
+    },
+    {
+      label: 'Mapa',
+      icon: 'map' as const,
+      destination: 'Map',
+      onPress: () => {
+        navigation.navigate('Map');
+      },
+    },
+    {
+      label: 'Časté dotazy',
+      icon: 'help-circle' as const,
+      destination: 'FAQ',
+      onPress: () => {
+        navigation.navigate('FAQ');
+      },
+    },
+    {
+      label: 'Novinky',
+      icon: 'newspaper' as const,
+      destination: 'News',
+      onPress: () => navigation.navigate('News'),
+    },
   ];
+
+  const handleTilePress = (tile: (typeof tiles)[number]) => {
+    logEvent('cta_click', { cta_name: tile.label, destination: tile.destination, source: 'home_tile' });
+    tile.onPress();
+  };
 
   const backgroundImage = require('../../assets/background-hp.png');
   const logoImage = require('../../assets/logo.png');
@@ -157,7 +186,7 @@ export default function HomeScreen() {
                   <TouchableOpacity
                     key={tile.label}
                     style={styles.tile}
-                    onPress={tile.onPress}
+                    onPress={() => handleTilePress(tile)}
                     activeOpacity={0.8}
                   >
                     <Ionicons name={tile.icon} size={36} color="#21AAB0" style={styles.tileIcon} />
@@ -183,6 +212,11 @@ export default function HomeScreen() {
                         style={styles.partnerBox}
                         onPress={() => {
                           if (partner.link) {
+                            logEvent('partner_click', {
+                              partner_id: partner.id,
+                              partner_name: partner.name,
+                              source: 'home_partners',
+                            });
                             const url = partner.link.startsWith('http') ? partner.link : `https://${partner.link}`;
                             Linking.openURL(url).catch(err => {
                               console.warn('Nešlo otevřít odkaz:', url, err);
@@ -209,7 +243,10 @@ export default function HomeScreen() {
                 )}
                 <TouchableOpacity
                   style={styles.showAllBtn}
-                  onPress={() => navigation.navigate('Partners')}
+                  onPress={() => {
+                    logEvent('cta_click', { cta_name: 'Zobrazit všechny partnery', destination: 'Partners', source: 'home_partners' });
+                    navigation.navigate('Partners');
+                  }}
                 >
                   <Text style={[globalStyles.heading, styles.showAllBtnText]}>Zobrazit všechny partnery</Text>
                 </TouchableOpacity>
@@ -259,7 +296,10 @@ export default function HomeScreen() {
                 )}
                 <TouchableOpacity
                   style={styles.showAllBtn}
-                  onPress={() => navigation.navigate('News')}
+                  onPress={() => {
+                    logEvent('cta_click', { cta_name: 'Zobrazit všechny novinky', destination: 'News', source: 'home_news' });
+                    navigation.navigate('News');
+                  }}
                 >
                   <Text style={[globalStyles.heading, styles.showAllBtnText]}>Zobrazit všechny novinky</Text>
                 </TouchableOpacity>
@@ -309,7 +349,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginTop: 40,
+    marginTop: 20,
     marginBottom: 0,
   },
   tile: {

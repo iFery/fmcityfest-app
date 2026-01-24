@@ -5,8 +5,10 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from '../services/notifications';
+import { notificationRegistrationService } from '../services/notificationRegistration';
 import { useNotificationPreferencesStore } from '../stores/notificationPreferencesStore';
 import { navigate } from '../navigation/AppNavigator';
+import { logEvent } from '../services/analytics';
 
 type PromptStyle = 'modal' | 'toast-action';
 
@@ -59,6 +61,7 @@ export function useFavoriteFeedback(
     const granted = await notificationService.requestPermissions();
     if (granted) {
       await notificationService.getToken();
+      await notificationRegistrationService.syncImportantFestivalRegistration();
     }
 
     const { status } = await Notifications.getPermissionsAsync();
@@ -114,6 +117,7 @@ export function useFavoriteFeedback(
         {
           label: 'Povolit notifikace',
           onPress: async () => {
+            logEvent('notification_prompt', { action: 'accepted', source: 'toast_action' });
             const nextStatus = await requestSystemPermission();
             if (nextStatus === 'granted' && favoriteArtistsNotifications) {
               showToast(messageBuilders.addedGranted(safeLabel), 2500);

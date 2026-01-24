@@ -14,6 +14,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { logEvent } from '../services/analytics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -21,19 +22,29 @@ interface NotificationPermissionModalProps {
   visible: boolean;
   onAllowNotifications: () => void;
   onDismiss: () => void;
+  source?: string;
 }
 
 export default function NotificationPermissionModal({
   visible,
   onAllowNotifications,
   onDismiss,
+  source,
 }: NotificationPermissionModalProps) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const hasLoggedShown = useRef(false);
 
   useEffect(() => {
     if (visible) {
+      if (!hasLoggedShown.current) {
+        hasLoggedShown.current = true;
+        logEvent('notification_prompt', {
+          action: 'shown',
+          source: source || 'unknown',
+        });
+      }
       fadeAnim.setValue(0);
       slideAnim.setValue(30);
       pulseAnim.setValue(1);
@@ -69,8 +80,9 @@ export default function NotificationPermissionModal({
       fadeAnim.setValue(0);
       slideAnim.setValue(30);
       pulseAnim.setValue(1);
+      hasLoggedShown.current = false;
     }
-  }, [visible, fadeAnim, slideAnim, pulseAnim]);
+  }, [visible, fadeAnim, slideAnim, pulseAnim, source]);
 
   if (!visible) {
     return null;
@@ -122,7 +134,13 @@ export default function NotificationPermissionModal({
             </Text>
 
             <TouchableOpacity
-              onPress={onAllowNotifications}
+              onPress={() => {
+                logEvent('notification_prompt', {
+                  action: 'accepted',
+                  source: source || 'unknown',
+                });
+                onAllowNotifications();
+              }}
               activeOpacity={0.85}
               style={styles.primaryButton}
             >
@@ -132,7 +150,13 @@ export default function NotificationPermissionModal({
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={onDismiss}
+              onPress={() => {
+                logEvent('notification_prompt', {
+                  action: 'dismissed',
+                  source: source || 'unknown',
+                });
+                onDismiss();
+              }}
               activeOpacity={0.6}
               style={styles.secondaryButton}
             >

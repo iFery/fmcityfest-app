@@ -25,6 +25,8 @@ import EventSelectionModal from '../components/EventSelectionModal';
 import Toast from '../components/Toast';
 import Header from '../components/Header';
 import { useTheme } from '../theme/ThemeProvider';
+import { logEvent } from '../services/analytics';
+import { useScreenView } from '../hooks/useScreenView';
 import type { Artist } from '../types';
 
 type ArtistsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -50,6 +52,7 @@ export default function ArtistsScreen() {
   const { toggleEvent, isArtistFavorite, isEventFavorite, favoriteEvents } = useFavorites();
   const { timelineData } = useTimeline();
   const previousTabRef = useRef<string | null>(null);
+  useScreenView('Artists');
 
   const [eventModalVisible, setEventModalVisible] = useState(false);
   const [selectedArtistForModal, setSelectedArtistForModal] = useState<Artist | null>(null);
@@ -154,6 +157,7 @@ export default function ArtistsScreen() {
   }, [filteredArtists, isArtistFavorite]);
 
   const handleArtistPress = useCallback((artist: Artist) => {
+    logEvent('artist_open', { artist_id: artist.id, artist_name: artist.name, source: 'artists_grid' });
     navigation.navigate('ArtistDetail', {
       artistId: artist.id,
       artistName: artist.name,
@@ -168,6 +172,7 @@ export default function ArtistsScreen() {
       const artistEvents = artistEventsMap.get(artistId) || [];
 
       if (artistEvents.length > 1) {
+        logEvent('event_selection_modal', { action: 'open', artist_id: artistId, events_count: artistEvents.length });
         setSelectedArtistForModal(artist);
         setSelectedArtistEvents(artistEvents);
         setEventModalVisible(true);
@@ -179,6 +184,14 @@ export default function ArtistsScreen() {
 
       const wasFavorite = isEventFavorite(eventId);
       toggleEvent(eventId);
+
+      logEvent('favorite_change', {
+        action: wasFavorite ? 'remove' : 'add',
+        entity_type: 'event',
+        event_id: eventId,
+        artist_id: artistId,
+        source: 'artists_grid',
+      });
 
       if (!wasFavorite) {
         await handleFavoriteAdded(artist.name || 'Interpret');
@@ -194,6 +207,14 @@ export default function ArtistsScreen() {
       const wasFavorite = isEventFavorite(eventId);
       toggleEvent(eventId);
       const label = eventName || 'Koncert';
+
+      logEvent('favorite_change', {
+        action: wasFavorite ? 'remove' : 'add',
+        entity_type: 'event',
+        event_id: eventId,
+        source: 'event_selection_modal',
+      });
+
       if (!wasFavorite) {
         await handleFavoriteAdded(label);
       } else {
@@ -208,7 +229,10 @@ export default function ArtistsScreen() {
     setEventModalVisible(false);
     setSelectedArtistForModal(null);
     setSelectedArtistEvents([]);
-  }, [hideToast]);
+    if (selectedArtistForModal?.id) {
+      logEvent('event_selection_modal', { action: 'close', artist_id: selectedArtistForModal.id });
+    }
+  }, [hideToast, selectedArtistForModal]);
 
   const renderArtistCard = useCallback(
     ({ item }: { item: Artist & { id?: string } }) => {
@@ -275,7 +299,11 @@ export default function ArtistsScreen() {
             <TouchableOpacity
               key={category}
               style={[styles.filterButton, active && styles.activeFilterButton]}
-              onPress={() => setSelectedCategory(category === 'Všichni' ? null : category)}
+              onPress={() => {
+                const nextCategory = category === 'Všichni' ? null : category;
+                setSelectedCategory(nextCategory);
+                logEvent('filter_select', { category: nextCategory || 'Všichni', source: 'artists' });
+              }}
               activeOpacity={0.7}
             >
               <Text

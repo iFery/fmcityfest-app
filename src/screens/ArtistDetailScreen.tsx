@@ -26,6 +26,8 @@ import NotificationPermissionModal from '../components/NotificationPermissionMod
 import Toast from '../components/Toast';
 import Header from '../components/Header';
 import { useTheme } from '../theme/ThemeProvider';
+import { logEvent } from '../services/analytics';
+import { useScreenView } from '../hooks/useScreenView';
 
 dayjs.locale('cs');
 dayjs.extend(localizedFormat);
@@ -53,6 +55,7 @@ export default function ArtistDetailScreen() {
   const { artistId } = route.params;
   const { artists, loading, error, refetch } = useArtists();
   const { toggleEvent, isEventFavorite, favoriteEvents } = useFavorites();
+  useScreenView('ArtistDetail');
 
   const {
     toastVisible,
@@ -103,6 +106,14 @@ export default function ArtistDetailScreen() {
 
     const wasFavorite = isEventFavorite(eventId);
     toggleEvent(eventId);
+
+    logEvent('favorite_change', {
+      action: wasFavorite ? 'remove' : 'add',
+      entity_type: 'event',
+      event_id: eventId,
+      artist_id: artistId,
+      source: 'artist_detail',
+    });
 
     const artistName = artist?.name || 'Interpret';
     if (!wasFavorite) {
@@ -194,7 +205,15 @@ export default function ArtistDetailScreen() {
                           {eventId && (
                             <TouchableOpacity
                               onPress={async () => {
+                                const wasFavorite = isEventFav;
                                 toggleEvent(eventId);
+                                logEvent('favorite_change', {
+                                  action: wasFavorite ? 'remove' : 'add',
+                                  entity_type: 'event',
+                                  event_id: eventId,
+                                  artist_id: artistId,
+                                  source: 'artist_detail',
+                                });
                                 const eventName = event.name || artist?.name || 'Koncert';
                                 if (isEventFav) {
                                   await handleFavoriteRemoved(eventName);

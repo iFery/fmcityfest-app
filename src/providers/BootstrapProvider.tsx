@@ -12,6 +12,7 @@ import { crashlyticsService } from '../services/crashlytics';
 import { initializeFirebase, ensureFirebaseInitialized } from '../services/firebase';
 import { remoteConfigService } from '../services/remoteConfig';
 import { notificationService } from '../services/notifications';
+import { notificationRegistrationService } from '../services/notificationRegistration';
 import { Platform } from 'react-native';
 import { TimelineApiResponse } from '../api/endpoints';
 import { checkForUpdate, UpdateInfo } from '../services/updateService';
@@ -158,6 +159,7 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
             if (!isMounted || abortController.signal.aborted) return;
             if (token) {
               crashlyticsService.log('FCM Token registered');
+              await notificationRegistrationService.syncImportantFestivalRegistration();
             }
             // Store listeners (they live for app lifetime, no cleanup needed)
             await notificationService.setupNotificationListeners();

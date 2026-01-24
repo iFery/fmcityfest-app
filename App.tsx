@@ -29,7 +29,6 @@ function AppContent({ fontsReady }: { fontsReady: boolean }) {
   const [rootLayoutDone, setRootLayoutDone] = useState(false);
   const appOpacity = useRef(new Animated.Value(0)).current;
 
-  const isLoading = state === 'loading';
   const isBlocked = state === 'offline-blocked';
   const isUpdateRequired = state === 'update-required';
   const isUpdateOptional = state === 'update-optional';
@@ -129,10 +128,11 @@ function AppContent({ fontsReady }: { fontsReady: boolean }) {
   );
 }
 
+
 export default function App() {
   useEffect(() => {
     if (Platform.OS === 'android') {
-      NavigationBar.setBackgroundColorAsync('#002239');
+      // V edge-to-edge režimu lze měnit jen styl ikon
       NavigationBar.setButtonStyleAsync('light');
     }
   }, []);
@@ -140,7 +140,9 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <BootstrapProvider>
-        <AppContentWithFonts />
+        <View style={styles.root}>
+          <AppContentWithFonts />
+        </View>
       </BootstrapProvider>
     </SafeAreaProvider>
   );
@@ -193,6 +195,10 @@ function AppContentWithTimeline({ fontsReady }: { fontsReady: boolean }) {
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+    backgroundColor: '#002239',
+  },
   appContainer: {
     flex: 1,
     backgroundColor: '#002239',

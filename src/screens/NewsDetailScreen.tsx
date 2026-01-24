@@ -24,6 +24,8 @@ import { newsApi, type ApiError } from '../api';
 import { loadFromCache } from '../utils/cacheManager';
 import type { News } from '../types';
 import { useTheme } from '../theme/ThemeProvider';
+import { logEvent } from '../services/analytics';
+import { useScreenView } from '../hooks/useScreenView';
 
 type NewsDetailScreenRouteProp = RouteProp<RootStackParamList, 'NewsDetail'>;
 type NewsDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -37,8 +39,10 @@ export default function NewsDetailScreen() {
   const { newsId } = route.params;
   const [news, setNews] = useState<News | null>(null);
   const newsRef = useRef<News | null>(null);
+  const hasLoggedView = useRef(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  useScreenView('NewsDetail');
 
   useEffect(() => {
     let isMounted = true;
@@ -94,6 +98,12 @@ export default function NewsDetailScreen() {
       isMounted = false;
     };
   }, [newsId]);
+
+  useEffect(() => {
+    if (!news || hasLoggedView.current) return;
+    hasLoggedView.current = true;
+    logEvent('news_detail_view', { news_id: news.id, source: 'news_detail' });
+  }, [news]);
 
   const formatDate = (dateString: string) => {
     try {
@@ -161,7 +171,7 @@ export default function NewsDetailScreen() {
 
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <Ionicons name="arrow-back" size={20} color="white" style={styles.backIcon} />
-          <Text style={[styles.backButtonText, globalStyles.bodyStrong]}>Zpět</Text>
+          <Text style={[styles.backButtonText, globalStyles.button]}>Zpět</Text>
         </TouchableOpacity>
       </View>
     </>

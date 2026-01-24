@@ -197,10 +197,15 @@ module.exports = ({ config }) => {
         },
         package: 'com.fmcityfest.app',
         googleServicesFile: androidGoogleServicesFile,
-        versionCode: 17, // Increment this for each release to Google Play
+        versionCode: 22, // Increment this for each release to Google Play
         permissions: [
           'com.google.android.gms.permission.AD_ID', // Required for advertising ID usage (Android 13+)
         ],
+      },
+      androidNavigationBar: {
+        backgroundColor: '#092533',
+        barStyle: 'light-content',
+        enforceContrast: false,
       },
       web: {
         favicon: './assets/favicon.png',
@@ -222,7 +227,6 @@ module.exports = ({ config }) => {
             ios: {
               // Force Objective-C AppDelegate for Firebase compatibility
               // Firebase plugin requires Objective-C, not Swift
-              useFrameworks: 'static',
               // Expo SDK 52 requires iOS 15.1+ (was 13.4 in SDK 51)
               deploymentTarget: '15.1',
             },
@@ -258,6 +262,8 @@ module.exports = ({ config }) => {
         './plugins/withAndroidAdIdPermission.js',
         // Custom plugin to configure iOS app settings (display name, category, capabilities)
         './plugins/withIosAppConfig.js',
+        // Custom plugin to add use_modular_headers! to Podfile (Firebase Swift pods)
+        './plugins/withIosModularHeaders.js',
         // Custom plugin to add release signing configuration
         './plugins/withAndroidSigning.js',
         // Custom plugin to add Firebase Crashlytics Gradle plugin

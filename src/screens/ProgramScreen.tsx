@@ -28,6 +28,8 @@ import { useTimeline } from '../contexts/TimelineContext';
 import Header from '../components/Header';
 import Toast from '../components/Toast';
 import { useTheme } from '../theme/ThemeProvider';
+import { logEvent } from '../services/analytics';
+import { useScreenView } from '../hooks/useScreenView';
 
 dayjs.locale('cs');
 dayjs.extend(utc);
@@ -56,6 +58,7 @@ export default function ProgramScreen() {
   const { loading, error } = useEvents();
   const { favoriteEvents, toggleEvent, isEventFavorite } = useFavorites();
   const previousTabRef = useRef<string | null>(null);
+  useScreenView('Program');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -253,6 +256,12 @@ export default function ProgramScreen() {
 
   const handleEventPress = (event: TimelineEvent) => {
     if (event.interpret_id) {
+      logEvent('event_open', {
+        event_id: event.id,
+        artist_id: event.interpret_id,
+        stage: event.stage,
+        source: 'program',
+      });
       navigation.navigate('ArtistDetail', {
         artistId: event.interpret_id.toString(),
         artistName: event.name || event.artist || 'Interpret',
@@ -317,7 +326,10 @@ export default function ProgramScreen() {
               return (
                 <TouchableOpacity
                   key={key}
-                  onPress={() => setDay(key)}
+                  onPress={() => {
+                    setDay(key);
+                    logEvent('program_day_switch', { day: key });
+                  }}
                   style={[styles.dayButton, isActive && styles.dayButtonActive]}
                 >
                   <Text style={[styles.dayButtonText, globalStyles.subtitle]}>
@@ -384,6 +396,13 @@ export default function ProgramScreen() {
                               const wasFavorite = isEventFavorite(event.id);
                               toggleEvent(event.id);
                               const label = event.name || event.artist || 'Koncert';
+                              logEvent('favorite_change', {
+                                action: wasFavorite ? 'remove' : 'add',
+                                entity_type: 'event',
+                                event_id: event.id,
+                                artist_id: event.interpret_id,
+                                source: 'program_longpress',
+                              });
                               if (!wasFavorite) {
                                 await handleFavoriteAdded(label);
                               } else {
@@ -432,7 +451,10 @@ export default function ProgramScreen() {
           </ScrollView>
           <View style={styles.experimentalLinkWrapper}>
             <TouchableOpacity
-              onPress={() => navigation.navigate('ProgramHorizontal')}
+              onPress={() => {
+                logEvent('layout_switch', { to: 'horizontal', source: 'program' });
+                navigation.navigate('ProgramHorizontal');
+              }}
               activeOpacity={0.75}
             >
               <Text style={[styles.experimentalLinkText, globalStyles.caption]}>
@@ -444,7 +466,13 @@ export default function ProgramScreen() {
         <View style={styles.helpContainer} pointerEvents="box-none">
           <TouchableOpacity
             style={styles.helpButton}
-            onPress={() => setHelpExpanded((prev) => !prev)}
+            onPress={() => {
+              setHelpExpanded((prev) => {
+                const next = !prev;
+                logEvent('help_bubble_toggle', { state: next ? 'open' : 'close', source: 'program' });
+                return next;
+              });
+            }}
             activeOpacity={0.8}
           >
             <Ionicons name="help-circle-outline" size={22} color="#FFFFFF" />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -23,7 +23,10 @@ import { useEvents } from '../hooks/useEvents';
 import { useNews } from '../hooks/useNews';
 import { usePartners } from '../hooks/usePartners';
 import { notificationService } from '../services/notifications';
+import { notificationRegistrationService } from '../services/notificationRegistration';
 import { useTheme } from '../theme/ThemeProvider';
+import { logEvent } from '../services/analytics';
+import { useScreenView } from '../hooks/useScreenView';
 
 const HEADER_HEIGHT = 130;
 
@@ -39,6 +42,7 @@ export default function SettingsScreen() {
   } = useNotificationPreferencesStore();
 
   const { globalStyles } = useTheme();
+  useScreenView('Settings');
 
   const { refetch: refetchArtists } = useArtists();
   const { refetch: refetchEvents } = useEvents();
@@ -48,26 +52,39 @@ export default function SettingsScreen() {
   const [notificationPermissionStatus, setNotificationPermissionStatus] = useState<string>('');
   const [showClearModal, setShowClearModal] = useState(false);
   const leadTimeOptions = [5, 10, 15, 30];
+  const previousPermissionStatusRef = useRef<string | null>(null);
 
-  useEffect(() => {
-    checkNotificationPermission();
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      checkNotificationPermission();
-    }, [])
-  );
-
-  const checkNotificationPermission = async () => {
+  const checkNotificationPermission = React.useCallback(async () => {
     try {
+      const previousStatus = previousPermissionStatusRef.current;
       const { status } = await Notifications.getPermissionsAsync();
       setNotificationPermissionStatus(status);
+      previousPermissionStatusRef.current = status;
+
+      const permissionJustGranted =
+        previousStatus && previousStatus !== 'granted' && status === 'granted';
+
+      if (permissionJustGranted) {
+        setFavoriteArtistsNotifications(true);
+        setImportantFestivalNotifications(true);
+      }
+
+      await notificationRegistrationService.syncImportantFestivalRegistration();
     } catch (error) {
       console.error('Error checking notification permission:', error);
       setNotificationPermissionStatus('undetermined');
     }
-  };
+  }, [setFavoriteArtistsNotifications, setImportantFestivalNotifications]);
+
+  useEffect(() => {
+    checkNotificationPermission();
+  }, [checkNotificationPermission]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      checkNotificationPermission();
+    }, [checkNotificationPermission])
+  );
 
   const isNotificationEnabled = notificationPermissionStatus === 'granted';
 
@@ -77,9 +94,14 @@ export default function SettingsScreen() {
 
       if (status === 'granted') {
         setNotificationPermissionStatus('granted');
+        previousPermissionStatusRef.current = 'granted';
+        setFavoriteArtistsNotifications(true);
+        setImportantFestivalNotifications(true);
+        await notificationRegistrationService.syncImportantFestivalRegistration();
         return;
       }
 
+      logEvent('open_system_settings', { source: 'settings_notifications' });
       if (Platform.OS === 'ios') {
         Linking.openURL('app-settings:');
       } else {
@@ -87,6 +109,7 @@ export default function SettingsScreen() {
       }
     } catch (error) {
       console.error('Error requesting permissions:', error);
+      logEvent('open_system_settings', { source: 'settings_notifications' });
       if (Platform.OS === 'ios') {
         Linking.openURL('app-settings:');
       } else {
@@ -102,6 +125,7 @@ export default function SettingsScreen() {
   const confirmClearFavorites = () => {
     clearAll();
     setShowClearModal(false);
+    logEvent('clear_favorites_confirmed', { source: 'settings' });
     Alert.alert('Hotovo', 'Můj program byl vymazán');
   };
 
@@ -113,14 +137,21 @@ export default function SettingsScreen() {
         refetchNews(),
         refetchPartners(),
       ]);
+      logEvent('refresh_data', { status: 'success', source: 'settings' });
       Alert.alert('Hotovo', 'Data byla obnovena');
     } catch {
+      logEvent('refresh_data', { status: 'error', source: 'settings' });
       Alert.alert('Chyba', 'Nepodařilo se obnovit data');
     }
   };
 
   const handleToggleFavoriteArtistsNotifications = async (enabled: boolean) => {
     setFavoriteArtistsNotifications(enabled);
+    logEvent('notification_settings_change', {
+      type: 'favorite_events',
+      value: enabled,
+      lead_minutes: favoriteArtistsNotificationLeadMinutes,
+    });
 
     const { status } = await Notifications.getPermissionsAsync();
     if (status !== 'granted') {
@@ -130,6 +161,15 @@ export default function SettingsScreen() {
     if (!enabled) {
       await notificationService.cancelAllFavoriteNotifications();
     }
+  };
+
+  const handleToggleImportantFestivalNotifications = async (enabled: boolean) => {
+    setImportantFestivalNotifications(enabled);
+    await notificationRegistrationService.syncImportantFestivalRegistration();
+    logEvent('notification_settings_change', {
+      type: 'important_festival',
+      value: enabled,
+    });
   };
 
   const isNotificationsDisabled = !isNotificationEnabled;
@@ -224,7 +264,13 @@ export default function SettingsScreen() {
                         isSelected && styles.leadTimeOptionActive,
                         isLeadTimeDisabled && styles.leadTimeOptionDisabled,
                       ]}
-                      onPress={() => setFavoriteArtistsNotificationLeadMinutes(minutes)}
+                      onPress={() => {
+                        setFavoriteArtistsNotificationLeadMinutes(minutes);
+                        logEvent('notification_settings_change', {
+                          type: 'favorite_events_lead_time',
+                          value: minutes,
+                        });
+                      }}
                       activeOpacity={0.7}
                       disabled={isLeadTimeDisabled}
                     >
@@ -254,7 +300,7 @@ export default function SettingsScreen() {
               </View>
               <Switch
                 value={importantFestivalNotifications && isNotificationEnabled}
-                onValueChange={setImportantFestivalNotifications}
+                onValueChange={handleToggleImportantFestivalNotifications}
                 disabled={!isNotificationEnabled}
                 trackColor={{ false: '#1A3B5A', true: '#EA5178' }}
                 thumbColor="#FFFFFF"

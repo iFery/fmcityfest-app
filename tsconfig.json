@@ -6,7 +6,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "allowSyntheticDefaultImports": true,
     "jsx": "react-native",
     "baseUrl": ".",

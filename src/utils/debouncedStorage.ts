@@ -11,7 +11,7 @@ const DEBOUNCE_MS = 300; // Debounce writes by 300ms
 interface PendingWrite {
   key: string;
   value: string;
-  timeout: NodeJS.Timeout;
+  timeout: ReturnType<typeof setTimeout>;
 }
 
 class DebouncedStorage implements StateStorage {

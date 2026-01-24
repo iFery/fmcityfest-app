@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,10 @@ import {
 import ImageZoomBase from 'react-native-image-pan-zoom';
 import Header from '../components/Header';
 import { useTheme } from '../theme/ThemeProvider';
+import { useMaps } from '../hooks/useMaps';
+import { logEvent } from '../services/analytics';
+import { useScreenView } from '../hooks/useScreenView';
+import type { MapItem } from '../types';
 
 // Type assertion to allow children prop (library types are incomplete)
 const ImageZoom = ImageZoomBase as React.ComponentType<
@@ -21,44 +25,59 @@ const ImageZoom = ImageZoomBase as React.ComponentType<
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-const BASE_URL = 'https://www.fmcityfest.cz';
-
-const mapData = {
-  areal: {
-    key: 'areal',
-    title: 'Areál',
-    url: `${BASE_URL}/media/2025/mapa-areal.jpg`,
-  },
-  parking: {
-    key: 'parking',
-    title: 'Parkoviště',
-    url: `${BASE_URL}/media/2025/mapa-parkoviste.png`,
-  },
-  stan: {
-    key: 'stan',
-    title: 'Stanové městečko',
-    url: `${BASE_URL}/media/2025/mapa-camp.png`,
-  },
-};
-
-type MapType = keyof typeof mapData;
+type MapKey = string;
 
 const HEADER_HEIGHT = 130;
 const MAP_CONTAINER_HEIGHT = SCREEN_HEIGHT - HEADER_HEIGHT - 150;
 
 export default function MapScreen() {
   const { globalStyles } = useTheme();
-  const [selectedMap, setSelectedMap] = useState<MapType>('areal');
+  const { maps, loading: mapsLoading, error: mapsError, refetch } = useMaps();
+  const [selectedMap, setSelectedMap] = useState<MapKey | null>(null);
   const [imageLoading, setImageLoading] = useState(true);
   const [imageError, setImageError] = useState(false);
+  useScreenView('Map');
 
-  const handleMapChange = (mapType: MapType) => {
-    setSelectedMap(mapType);
+  const mapList = useMemo(() => Object.values(maps), [maps]);
+  const currentMap = useMemo<MapItem | null>(() => {
+    if (selectedMap && maps[selectedMap]) {
+      return maps[selectedMap];
+    }
+    return mapList.length > 0 ? mapList[0] : null;
+  }, [mapList, maps, selectedMap]);
+
+  useEffect(() => {
+    if (mapList.length === 0 || selectedMap) return;
+    const preferredKey = maps.areal?.key;
+    const firstKey = mapList[0]?.key;
+    const initialKey = preferredKey || firstKey;
+    if (initialKey) {
+      logEvent('map_select', { map_key: initialKey, source: 'auto' });
+      setSelectedMap(initialKey);
+      setImageLoading(true);
+      setImageError(false);
+    }
+  }, [mapList, maps, selectedMap]);
+
+  const handleMapChange = (mapKey: MapKey) => {
+    logEvent('map_select', { map_key: mapKey, source: 'user' });
+    setSelectedMap(mapKey);
     setImageLoading(true);
     setImageError(false);
   };
 
-  const currentMap = mapData[selectedMap];
+  const handleMapRetry = () => {
+    logEvent('map_retry', { map_key: selectedMap || undefined });
+    setImageError(false);
+    setImageLoading(true);
+    refetch();
+  };
+
+  useEffect(() => {
+    if (mapsError && mapList.length === 0) {
+      logEvent('content_load', { content_type: 'maps', status: 'error' });
+    }
+  }, [mapList.length, mapsError]);
 
   return (
     <>
@@ -80,20 +99,20 @@ export default function MapScreen() {
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.filterList}
             >
-              {Object.values(mapData).map((map) => (
+              {mapList.map((map) => (
                 <TouchableOpacity
                   key={map.key}
                   style={[
                     styles.filterButton,
                     selectedMap === map.key && styles.activeFilterButton,
                   ]}
-                  onPress={() => handleMapChange(map.key as MapType)}
+                  onPress={() => handleMapChange(map.key)}
                   activeOpacity={0.7}
                 >
                   <Text
                     style={[
                       styles.filterText,
-                      globalStyles.bodyStrong,
+                      globalStyles.subtitle,
                       selectedMap === map.key && styles.activeFilterText,
                     ]}
                   >
@@ -106,18 +125,33 @@ export default function MapScreen() {
 
           {/* Map Image Container with Zoom */}
           <View style={styles.mapContainer}>
-            {imageLoading && (
+            {(mapsLoading && mapList.length === 0) || (imageLoading && currentMap) ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#21AAB0" />
               </View>
-            )}
-            {imageError ? (
+            ) : null}
+            {mapsError && mapList.length === 0 ? (
+              <View style={styles.errorContainer}>
+                <Text style={[styles.errorText, globalStyles.text]}>
+                  Nepodařilo se načíst mapy
+                </Text>
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  onPress={handleMapRetry}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.retryButtonText, globalStyles.text]}>
+                    Zkusit znovu
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : imageError ? (
               <View style={styles.errorContainer}>
                 <Text style={[styles.errorText, globalStyles.text]}>
                   Nepodařilo se načíst mapu
                 </Text>
               </View>
-            ) : (
+            ) : currentMap ? (
               <ImageZoom
                 cropWidth={SCREEN_WIDTH - 40}
                 cropHeight={MAP_CONTAINER_HEIGHT}
@@ -133,14 +167,22 @@ export default function MapScreen() {
                   style={styles.mapImage}
                   resizeMode="contain"
                   onLoadStart={() => setImageLoading(true)}
-                  onLoadEnd={() => setImageLoading(false)}
+                  onLoadEnd={() => {
+                    setImageLoading(false);
+                    if (currentMap?.key) {
+                      logEvent('map_load', { map_key: currentMap.key, status: 'success' });
+                    }
+                  }}
                   onError={() => {
                     setImageError(true);
                     setImageLoading(false);
+                    if (currentMap?.key) {
+                      logEvent('map_load', { map_key: currentMap.key, status: 'error' });
+                    }
                   }}
                 />
               </ImageZoom>
-            )}
+            ) : null}
           </View>
         </ScrollView>
       </View>
@@ -224,5 +266,16 @@ const styles = StyleSheet.create({
   errorText: {
     color: '#FFFFFF',
     textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 12,
+    borderColor: '#21AAB0',
+    borderWidth: 1,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  retryButtonText: {
+    color: '#21AAB0',
+    textTransform: 'uppercase',
   },
 });

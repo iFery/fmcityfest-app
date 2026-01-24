@@ -5,6 +5,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Notifications from 'expo-notifications';
 import { notificationService } from '../services/notifications';
+import { notificationRegistrationService } from '../services/notificationRegistration';
 import { useNotificationPromptStore } from '../stores/notificationPromptStore';
 
 const TIME_TO_SHOW_MS = 5000; // 5 seconds
@@ -30,7 +31,7 @@ export function useNotificationPrompt(
   const [showPrompt, setShowPrompt] = useState(false);
   const [permissionStatus, setPermissionStatus] = useState<string | null>(null);
   const { setPromptShown, shouldShowPrompt, resetDaily } = useNotificationPromptStore();
-  const timeRef = useRef<NodeJS.Timeout | null>(null);
+  const timeRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const scrollDetectedRef = useRef(false);
   const hasShownRef = useRef(false);
 
@@ -110,6 +111,7 @@ export function useNotificationPrompt(
       if (granted) {
         // Get token
         await notificationService.getToken();
+        await notificationRegistrationService.syncImportantFestivalRegistration();
         // Aktualizuj permission status, aby se modal nezobrazoval znovu
         setPermissionStatus('granted');
       } else {
@@ -184,4 +186,3 @@ export function useNotificationPrompt(
     onScroll,
   };
 }
-

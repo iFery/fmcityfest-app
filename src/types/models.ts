@@ -103,3 +103,10 @@ export interface FAQCategory {
   faqs: FAQItem[];
 }
 
+export interface MapItem {
+  key: string;
+  title: string;
+  url: string;
+}
+
+export type MapsData = Record<string, MapItem>;

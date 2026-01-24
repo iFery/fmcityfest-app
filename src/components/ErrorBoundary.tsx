@@ -4,18 +4,27 @@
 
 import React, { Component, ReactNode } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import logoImage from '../../assets/logo.png';
 
 // Lazy import crashlyticsService to avoid Firebase initialization during module import
 let crashlyticsService: any = null;
-const getCrashlyticsService = () => {
-  if (!crashlyticsService) {
-    try {
-      crashlyticsService = require('../services/crashlytics').crashlyticsService;
-    } catch (error) {
-      console.warn('⚠️ [ErrorBoundary.tsx] Failed to load crashlyticsService:', error);
-    }
+let crashlyticsLoadPromise: Promise<any> | null = null;
+const loadCrashlyticsService = () => {
+  if (crashlyticsService) {
+    return Promise.resolve(crashlyticsService);
   }
-  return crashlyticsService;
+  if (!crashlyticsLoadPromise) {
+    crashlyticsLoadPromise = import('../services/crashlytics')
+      .then((mod) => {
+        crashlyticsService = mod.crashlyticsService;
+        return crashlyticsService;
+      })
+      .catch((error) => {
+        console.warn('⚠️ [ErrorBoundary.tsx] Failed to load crashlyticsService:', error);
+        return null;
+      });
+  }
+  return crashlyticsLoadPromise;
 };
 
 interface Props {
@@ -40,15 +49,16 @@ export class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // Log to Crashlytics (lazy loaded)
-    try {
-      const service = getCrashlyticsService();
-      if (service) {
-        service.recordError(error);
-        service.log(`ErrorBoundary: ${errorInfo.componentStack}`);
-      }
-    } catch (e) {
-      console.warn('⚠️ [ErrorBoundary] Failed to log to Crashlytics:', e);
-    }
+    loadCrashlyticsService()
+      .then((service) => {
+        if (service) {
+          service.recordError(error);
+          service.log(`ErrorBoundary: ${errorInfo.componentStack}`);
+        }
+      })
+      .catch((e) => {
+        console.warn('⚠️ [ErrorBoundary] Failed to log to Crashlytics:', e);
+      });
     
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
@@ -62,8 +72,6 @@ export class ErrorBoundary extends Component<Props, State> {
       if (this.props.fallback) {
         return this.props.fallback;
       }
-
-      const logoImage = require('../../assets/logo.png');
 
       return (
         <View style={styles.container}>

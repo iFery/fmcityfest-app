@@ -22,6 +22,8 @@ import { useFavorites } from '../hooks/useFavorites';
 import { useTimeline } from '../contexts/TimelineContext';
 import Header from '../components/Header';
 import { useTheme } from '../theme/ThemeProvider';
+import { logEvent } from '../services/analytics';
+import { useScreenView } from '../hooks/useScreenView';
 
 dayjs.locale('cs');
 dayjs.extend(localizedFormat);
@@ -50,6 +52,7 @@ export default function FavoritesScreen() {
   const previousTabRef = useRef<string | null>(null);
   const [showPastEvents, setShowPastEvents] = useState(false);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  useScreenView('Favorites');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -135,6 +138,11 @@ export default function FavoritesScreen() {
 
   const handleEventPress = (event: TimelineEvent) => {
     if (event.interpret_id) {
+      logEvent('favorite_open', {
+        event_id: event.id,
+        artist_id: event.interpret_id,
+        source: showPastEvents ? 'favorites_past' : 'favorites_upcoming',
+      });
       navigation.navigate('ArtistDetail', {
         artistId: event.interpret_id.toString(),
         artistName: event.name || getArtistName(event.interpret_id),
@@ -182,7 +190,13 @@ export default function FavoritesScreen() {
               {pastEvents.length > 0 && (
                 <TouchableOpacity
                   style={styles.toggleButton}
-                  onPress={() => setShowPastEvents(!showPastEvents)}
+                  onPress={() => {
+                    setShowPastEvents((prev) => {
+                      const next = !prev;
+                      logEvent('favorites_toggle_past', { value: next });
+                      return next;
+                    });
+                  }}
                   activeOpacity={0.7}
                 >
                   <Ionicons

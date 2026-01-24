@@ -21,8 +21,8 @@ jest.mock('../../utils/cacheManager', () => ({
 }));
 
 describe('useFavorites', () => {
-  const mockedFavoritesStore = useFavoritesStore as jest.Mock;
-  const mockedPreferencesStore = useNotificationPreferencesStore as jest.Mock;
+  const mockedFavoritesStore = useFavoritesStore as unknown as jest.Mock;
+  const mockedPreferencesStore = useNotificationPreferencesStore as unknown as jest.Mock;
   const mockedTimeline = useTimeline as jest.Mock;
   const mockedLoadFromCache = loadFromCache as jest.Mock;
 

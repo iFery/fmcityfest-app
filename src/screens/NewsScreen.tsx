@@ -22,6 +22,8 @@ import Header from '../components/Header';
 import { useNews } from '../hooks/useNews';
 import type { News } from '../types';
 import { useTheme } from '../theme/ThemeProvider';
+import { logEvent } from '../services/analytics';
+import { useScreenView } from '../hooks/useScreenView';
 
 type NewsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
@@ -29,8 +31,10 @@ export default function NewsScreen() {
   const { globalStyles } = useTheme();
   const navigation = useNavigation<NewsScreenNavigationProp>();
   const { news, loading, error } = useNews();
+  useScreenView('NewsList');
 
   const handleNewsPress = useCallback((newsItem: News) => {
+    logEvent('news_open', { news_id: newsItem.id, source: 'news_list' });
     navigation.navigate('NewsDetail', {
       newsId: newsItem.id,
       newsTitle: newsItem.title,

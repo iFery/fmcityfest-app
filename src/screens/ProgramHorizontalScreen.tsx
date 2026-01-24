@@ -25,6 +25,8 @@ import { useFavorites } from '../hooks/useFavorites';
 import { useFavoriteFeedback } from '../hooks/useFavoriteFeedback';
 import { useTimeline } from '../contexts/TimelineContext';
 import { RootStackParamList } from '../navigation/linking';
+import { logEvent } from '../services/analytics';
+import { useScreenView } from '../hooks/useScreenView';
 
 dayjs.locale('cs');
 dayjs.extend(utc);
@@ -58,6 +60,7 @@ export default function ProgramHorizontalScreen() {
   const { favoriteEvents, toggleEvent, isEventFavorite } = useFavorites();
   const { timelineData, loading: timelineLoading, refetch: refetchTimeline } = useTimeline();
   const [day, setDay] = useState<'dayOne' | 'dayTwo'>('dayOne');
+  useScreenView('ProgramHorizontal');
 
   const {
     toastVisible,
@@ -165,6 +168,12 @@ export default function ProgramHorizontalScreen() {
 
   const handleEventPress = (event: TimelineEvent) => {
     if (event.interpret_id) {
+      logEvent('event_open', {
+        event_id: event.id,
+        artist_id: event.interpret_id,
+        stage: event.stage,
+        source: 'program_horizontal',
+      });
       navigation.navigate('ArtistDetail', {
         artistId: event.interpret_id.toString(),
         artistName: event.name || event.artist || 'Interpret',
@@ -231,7 +240,10 @@ export default function ProgramHorizontalScreen() {
               return (
                 <TouchableOpacity
                   key={key}
-                  onPress={() => setDay(key)}
+                  onPress={() => {
+                    setDay(key);
+                    logEvent('program_day_switch', { day: key, source: 'program_horizontal' });
+                  }}
                   style={[styles.dayButton, isActive && styles.dayButtonActive]}
                 >
                   <Text style={[styles.dayButtonText, globalStyles.subtitle]}>
@@ -327,6 +339,13 @@ export default function ProgramHorizontalScreen() {
                                 const wasFavorite = isEventFavorite(event.id);
                                 toggleEvent(event.id);
                                 const label = event.name || event.artist || 'Koncert';
+                                logEvent('favorite_change', {
+                                  action: wasFavorite ? 'remove' : 'add',
+                                  entity_type: 'event',
+                                  event_id: event.id,
+                                  artist_id: event.interpret_id,
+                                  source: 'program_horizontal_longpress',
+                                });
                                 if (!wasFavorite) {
                                   await handleFavoriteAdded(label);
                                 } else {

@@ -19,7 +19,7 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
   persist(
     (set) => ({
       favoriteArtistsNotifications: true,
-      importantFestivalNotifications: true,
+      importantFestivalNotifications: false,
       favoriteArtistsNotificationLeadMinutes: 10,
 
       setFavoriteArtistsNotifications: (enabled: boolean) => {
@@ -40,5 +40,4 @@ export const useNotificationPreferencesStore = create<NotificationPreferencesSto
     }
   )
 );
-
 

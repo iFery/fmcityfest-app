@@ -4,7 +4,7 @@
  */
 
 import { apiClient } from './client';
-import type { Event, Partner, News, FAQCategory } from '../types';
+import type { Event, Partner, News, FAQCategory, MapsData } from '../types';
 
 /**
  * API Response types for artists endpoint
@@ -82,6 +82,31 @@ export interface PartnerApiResponse {
 }
 
 /**
+ * Maps API Response type
+ */
+export type MapsApiResponse = MapsData;
+
+/**
+ * Notification token registration payload
+ */
+export interface NotificationTokenPayload {
+  fcm_token: string;
+  environment: 'DEV' | 'PROD';
+  system_enabled: boolean;
+  app_enabled: boolean;
+  active_for_important_alerts: boolean;
+  platform: string;
+  device_name?: string;
+  app_version?: string;
+  build_number?: string | number;
+}
+
+export interface NotificationTokenResponse {
+  status: 'ok' | 'error';
+  message?: string;
+}
+
+/**
  * Events API (timeline)
  */
 export const eventsApi = {
@@ -148,4 +173,19 @@ export const newsApi = {
  */
 export const faqApi = {
   getAll: () => apiClient.get<FAQCategory[]>('/faq.php'),
+};
+
+/**
+ * Maps API
+ */
+export const mapsApi = {
+  getAll: () => apiClient.get<MapsApiResponse>('/maps.php'),
+};
+
+/**
+ * Notification tokens API
+ */
+export const notificationTokensApi = {
+  upsert: (payload: NotificationTokenPayload) =>
+    apiClient.post<NotificationTokenResponse>('/notification-token.php', payload),
 };

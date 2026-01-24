@@ -5,6 +5,20 @@
 
 import { by, device, element, expect as detoxExpect, waitFor } from 'detox';
 
+type NetworkState = 'NONE' | 'WIFI';
+
+const setNetworkConnection = async (state: NetworkState) => {
+  const nativeDevice = device as typeof device & {
+    setNetworkConnection?: (connectionState: NetworkState) => Promise<void>;
+  };
+
+  if (typeof nativeDevice.setNetworkConnection === 'function') {
+    await nativeDevice.setNetworkConnection(state);
+  } else {
+    console.warn('setNetworkConnection is not supported on this Detox device');
+  }
+};
+
 describe('App Initialization', () => {
   beforeAll(async () => {
     await device.launchApp();
@@ -17,7 +31,7 @@ describe('App Initialization', () => {
   describe('Offline first launch blocked', () => {
     it('should show offline-blocked screen when offline and no cache', async () => {
       // Simulate offline state
-      await device.setNetworkConnection('NONE');
+      await setNetworkConnection('NONE');
 
       // Wait for bootstrap to complete
       await waitFor(element(by.text('Jste offline')))
@@ -36,7 +50,7 @@ describe('App Initialization', () => {
   describe('Online first launch success', () => {
     it('should load app successfully when online', async () => {
       // Simulate online state
-      await device.setNetworkConnection('WIFI');
+      await setNetworkConnection('WIFI');
 
       // Wait for app to load (should not show offline-blocked screen)
       await waitFor(element(by.id('app-navigator')))
@@ -52,13 +66,13 @@ describe('App Initialization', () => {
   describe('Offline with cached data works', () => {
     it('should show app content when offline but cache exists', async () => {
       // First, load app online to create cache
-      await device.setNetworkConnection('WIFI');
+      await setNetworkConnection('WIFI');
       await waitFor(element(by.id('app-navigator')))
         .toBeVisible()
         .withTimeout(10000);
 
       // Now go offline
-      await device.setNetworkConnection('NONE');
+      await setNetworkConnection('NONE');
       await device.reloadReactNative();
 
       // App should still work with cached data
