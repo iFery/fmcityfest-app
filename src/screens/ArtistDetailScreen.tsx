@@ -196,44 +196,43 @@ export default function ArtistDetailScreen() {
                 {artistEvents.map((event, index) => {
                   const startDate = event.start ? dayjs(event.start) : null;
                   const endDate = event.end ? dayjs(event.end) : null;
-                  const eventId = event.id || '';
+                  const eventId = event.id ? String(event.id) : null;
                   const isEventFav = eventId ? favoriteEvents.includes(eventId) : false;
                   const isPastEvent = hasEventEnded(event.start, event.end);
 
                   return (
                     <View key={event.id || index} style={styles.eventCard}>
-                      {hasMultipleConcerts && event.name && (
+                      {hasMultipleConcerts && event.name && eventId && (
                         <View style={styles.eventNameHeader}>
                           <Text style={[globalStyles.heading, styles.eventNameText]}>{event.name}</Text>
-                          {eventId && (
-                            <TouchableOpacity
-                              onPress={async () => {
-                                const wasFavorite = isEventFav;
-                                toggleEvent(eventId);
-                                logEvent('favorite_change', {
-                                  action: wasFavorite ? 'remove' : 'add',
-                                  entity_type: 'event',
-                                  event_id: eventId,
-                                  artist_id: artistId,
-                                  source: 'artist_detail',
-                                });
-                                const eventName = event.name || artist?.name || 'Koncert';
-                                if (isEventFav) {
-                                  await handleFavoriteRemoved(eventName);
-                                } else {
-                                  await handleFavoriteAdded(eventName, { isPastEvent });
-                                }
-                              }}
-                              style={styles.eventFavoriteButtonHeader}
-                              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                            >
-                              <Ionicons
-                                name={isEventFav ? 'heart' : 'heart-outline'}
-                                size={22}
-                                color={isEventFav ? '#EA5178' : '#999'}
-                              />
-                            </TouchableOpacity>
-                          )}
+                          <TouchableOpacity
+                            onPress={async () => {
+                              if (!eventId) return;
+                              const wasFavorite = isEventFav;
+                              toggleEvent(eventId);
+                              logEvent('favorite_change', {
+                                action: wasFavorite ? 'remove' : 'add',
+                                entity_type: 'event',
+                                event_id: eventId,
+                                artist_id: artistId,
+                                source: 'artist_detail',
+                              });
+                              const eventName = event.name || artist?.name || 'Koncert';
+                              if (wasFavorite) {
+                                await handleFavoriteRemoved(eventName);
+                              } else {
+                                await handleFavoriteAdded(eventName, { isPastEvent });
+                              }
+                            }}
+                            style={styles.eventFavoriteButtonHeader}
+                            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                          >
+                            <Ionicons
+                              name={isEventFav ? 'heart' : 'heart-outline'}
+                              size={22}
+                              color={isEventFav ? '#EA5178' : '#999'}
+                            />
+                          </TouchableOpacity>
                         </View>
                       )}
                       <View style={styles.eventRow}>

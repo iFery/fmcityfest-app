@@ -26,6 +26,7 @@ interface UseFavoritesResult {
   isEventFavorite: (eventId: string) => boolean;
   favoriteArtists: string[];
   favoriteEvents: string[];
+  setFavorites: (eventIds: string[]) => void;
   clearAll: () => void;
 }
 
@@ -39,6 +40,7 @@ export function useFavorites(): UseFavoritesResult {
     isEventFavorite: storeIsEventFavorite,
     favoriteArtists: legacyFavoriteArtists,
     favoriteEvents,
+    setFavorites,
     clearAll,
     clearLegacyArtists,
   } = useFavoritesStore();
@@ -60,8 +62,9 @@ export function useFavorites(): UseFavoritesResult {
 
     const events = timelineData.events as TimelineEvent[];
     for (const event of events) {
-      if (event.id && event.interpret_id) {
-        map.set(event.id, String(event.interpret_id));
+      const eventId = event.id ? String(event.id) : null;
+      if (eventId && event.interpret_id) {
+        map.set(eventId, String(event.interpret_id));
       }
     }
 
@@ -200,6 +203,7 @@ export function useFavorites(): UseFavoritesResult {
     isEventFavorite,
     favoriteArtists: derivedFavoriteArtists,
     favoriteEvents,
+    setFavorites,
     clearAll,
   };
 }

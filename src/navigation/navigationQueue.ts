@@ -7,6 +7,37 @@
 import { navigationRef } from './navigationRef';
 import type { RootStackParamList } from './linking';
 
+type TabRoute = 'Home' | 'Program' | 'Artists' | 'Favorites' | 'Info';
+
+const nestedRouteMap: Partial<
+  Record<
+    keyof RootStackParamList,
+    {
+      tab: TabRoute;
+      screen: keyof RootStackParamList;
+    }
+  >
+> = {
+  HomeMain: { tab: 'Home', screen: 'HomeMain' },
+  ArtistDetail: { tab: 'Home', screen: 'ArtistDetail' },
+  NewsDetail: { tab: 'Home', screen: 'NewsDetail' },
+  ProgramMain: { tab: 'Program', screen: 'ProgramMain' },
+  ProgramHorizontal: { tab: 'Program', screen: 'ProgramHorizontal' },
+  ArtistsMain: { tab: 'Artists', screen: 'ArtistsMain' },
+  FavoritesMain: { tab: 'Favorites', screen: 'FavoritesMain' },
+  SharedProgram: { tab: 'Favorites', screen: 'SharedProgram' },
+  InfoMain: { tab: 'Info', screen: 'InfoMain' },
+  AboutApp: { tab: 'Info', screen: 'AboutApp' },
+  Feedback: { tab: 'Info', screen: 'Feedback' },
+  Settings: { tab: 'Info', screen: 'Settings' },
+  Partners: { tab: 'Info', screen: 'Partners' },
+  News: { tab: 'Info', screen: 'News' },
+  FAQ: { tab: 'Info', screen: 'FAQ' },
+  Map: { tab: 'Info', screen: 'Map' },
+  Debug: { tab: 'Info', screen: 'Debug' },
+  Notifications: { tab: 'Info', screen: 'Notifications' },
+};
+
 type QueuedNavigation = {
   screen: keyof RootStackParamList;
   params?: RootStackParamList[keyof RootStackParamList];
@@ -65,6 +96,19 @@ class NavigationQueue {
     }
 
     try {
+      const nestedRoute = nestedRouteMap[screen];
+
+      if (nestedRoute) {
+        console.log('[NavigationQueue] Navigating via tab', nestedRoute.tab, '->', nestedRoute.screen, params || null);
+        (navigationRef.current as any).navigate(nestedRoute.tab, {
+          screen: nestedRoute.screen,
+          params,
+        });
+        return;
+      }
+
+      console.log('[NavigationQueue] Navigating directly to', screen, params || null);
+
       if (params !== undefined) {
         (navigationRef.current as any).navigate(screen, params);
       } else {

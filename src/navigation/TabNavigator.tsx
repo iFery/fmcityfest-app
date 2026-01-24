@@ -10,6 +10,7 @@ import ProgramScreen from '../screens/ProgramScreen';
 import ProgramHorizontalScreen from '../screens/ProgramHorizontalScreen';
 import ArtistsScreen from '../screens/ArtistsScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
+import SharedProgramScreen from '../screens/SharedProgramScreen';
 import InfoScreen from '../screens/InfoScreen';
 import AboutAppScreen from '../screens/AboutAppScreen';
 import FeedbackScreen from '../screens/FeedbackScreen';
@@ -91,6 +92,7 @@ function FavoritesStack() {
   return (
     <Stack.Navigator screenOptions={stackScreenOptions} initialRouteName="FavoritesMain">
       <Stack.Screen name="FavoritesMain" component={FavoritesScreen} />
+      <Stack.Screen name="SharedProgram" component={SharedProgramScreen} />
       <Stack.Screen name="ArtistDetail" component={ArtistDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Partners" component={PartnersScreen} />

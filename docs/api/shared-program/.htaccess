@@ -1,0 +1,8 @@
+Options -MultiViews
+RewriteEngine On
+RewriteBase /api/shared-program/
+
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^create/?$ create.php [QSA,L]
+RewriteRule ^([A-Za-z0-9]+)/?$ index.php?code=$1 [QSA,L]

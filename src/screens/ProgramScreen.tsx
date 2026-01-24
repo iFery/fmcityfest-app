@@ -471,7 +471,8 @@ export default function ProgramScreen() {
                         />
                       )}
                       {stageEventLayouts.map(({ key, event, start, end, top, height }) => {
-                        const isFavorite = event.id ? favoriteEvents.includes(event.id) : false;
+                        const eventId = event.id ? String(event.id) : null;
+                        const isFavorite = eventId ? favoriteEvents.includes(eventId) : false;
                         const eventNameLength = (event.name || '').length;
                         const isCompactEvent =
                           height <= COMPACT_EVENT_HEIGHT_THRESHOLD &&
@@ -482,15 +483,15 @@ export default function ProgramScreen() {
                             key={key}
                             onPress={() => handleEventPress(event)}
                             onLongPress={async () => {
-                              if (!event.id) return;
-                              const wasFavorite = isEventFavorite(event.id);
-                              toggleEvent(event.id);
+                              if (!eventId) return;
+                              const wasFavorite = isEventFavorite(eventId);
+                              toggleEvent(eventId);
                               const label = event.name || event.artist || 'Koncert';
                               const isPastEvent = hasEventEnded(event.start, event.end);
                               logEvent('favorite_change', {
                                 action: wasFavorite ? 'remove' : 'add',
                                 entity_type: 'event',
-                                event_id: event.id,
+                                event_id: eventId,
                                 artist_id: event.interpret_id,
                                 source: 'program_longpress',
                               });

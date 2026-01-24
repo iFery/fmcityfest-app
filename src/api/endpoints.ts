@@ -3,6 +3,7 @@
  * Centralized endpoint management for type safety and easier refactoring
  */
 
+import Constants from 'expo-constants';
 import { apiClient } from './client';
 import type { Event, Partner, News, FAQCategory, MapsData } from '../types';
 
@@ -106,6 +107,14 @@ export interface NotificationTokenResponse {
   message?: string;
 }
 
+export interface SharedProgramCreateResponse {
+  code: string;
+}
+
+export interface SharedProgramRetrieveResponse {
+  items: string[];
+}
+
 /**
  * Events API (timeline)
  */
@@ -188,4 +197,22 @@ export const mapsApi = {
 export const notificationTokensApi = {
   upsert: (payload: NotificationTokenPayload) =>
     apiClient.post<NotificationTokenResponse>('/notification-token.php', payload),
+};
+
+const extraConfig = (Constants.expoConfig?.extra ?? {}) as Record<string, unknown>;
+const sharedProgramApiBase = (typeof extraConfig.sharedProgramApiUrl === 'string'
+  ? extraConfig.sharedProgramApiUrl
+  : 'https://www.fmcityfest.cz/api/mobile-app/shared-program'
+).replace(/\/$/, '');
+const sharedProgramShareBase = (typeof extraConfig.sharedProgramShareUrl === 'string'
+  ? extraConfig.sharedProgramShareUrl
+  : 'https://www.fmcityfest.cz/p'
+).replace(/\/$/, '');
+
+export const sharedProgramApi = {
+  create: (items: string[]) =>
+    apiClient.post<SharedProgramCreateResponse>(`${sharedProgramApiBase}/create`, { items }),
+  get: (code: string) =>
+    apiClient.get<SharedProgramRetrieveResponse>(`${sharedProgramApiBase}/${encodeURIComponent(code)}`),
+  buildShareUrl: (code: string) => `${sharedProgramShareBase}/${encodeURIComponent(code)}`,
 };

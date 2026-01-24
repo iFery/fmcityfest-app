@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useRef } from 'react';
+import React, { useCallback, useMemo, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,10 @@ import {
   StatusBar,
   TouchableOpacity,
   Image,
+  Share,
+  Alert,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CommonActions } from '@react-navigation/native';
@@ -24,6 +27,7 @@ import Header from '../components/Header';
 import { useTheme } from '../theme/ThemeProvider';
 import { logEvent } from '../services/analytics';
 import { useScreenView } from '../hooks/useScreenView';
+import { sharedProgramApi } from '../api/endpoints';
 
 dayjs.locale('cs');
 dayjs.extend(localizedFormat);
@@ -49,9 +53,12 @@ export default function FavoritesScreen() {
   const { artists, loading: artistsLoading } = useArtists();
   const { favoriteEvents } = useFavorites();
   const { timelineData, loading: timelineLoading } = useTimeline();
+  const insets = useSafeAreaInsets();
   const previousTabRef = useRef<string | null>(null);
   const [showPastEvents, setShowPastEvents] = useState(false);
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const [shareLoading, setShareLoading] = useState(false);
+  const shareDisabled = !favoriteEvents.length || shareLoading;
   useScreenView('Favorites');
 
   useFocusEffect(
@@ -87,7 +94,10 @@ export default function FavoritesScreen() {
     if (!timelineData || favoriteEvents.length === 0) return [];
 
     return (timelineData.events as TimelineEvent[])
-      .filter((event) => event.id && event.start && favoriteEvents.includes(event.id))
+      .filter((event) => {
+        if (!event.id || !event.start) return false;
+        return favoriteEvents.includes(String(event.id));
+      })
       .sort((a, b) => {
         const startA = a.start ? new Date(a.start).getTime() : 0;
         const startB = b.start ? new Date(b.start).getTime() : 0;
@@ -150,6 +160,34 @@ export default function FavoritesScreen() {
     }
   };
 
+  const handleShareProgram = useCallback(async () => {
+    if (!favoriteEvents.length) {
+      Alert.alert('Nic k sdílení', 'Vyber si aspoň jeden koncert ve svém programu.');
+      return;
+    }
+
+    try {
+      setShareLoading(true);
+      const response = await sharedProgramApi.create(favoriteEvents);
+      const code = response.data.code;
+      const shareUrl = sharedProgramApi.buildShareUrl(code);
+
+      await Share.share({
+        message: `Můj program na FM CITY FEST:\n${shareUrl}`,
+      });
+
+      logEvent('favorites_share', {
+        code,
+        items: favoriteEvents.length,
+      });
+    } catch (error) {
+      console.error('Failed to share program', error);
+      Alert.alert('Ups!', 'Sdílení se nepovedlo. Zkus to prosím znovu.');
+    } finally {
+      setShareLoading(false);
+    }
+  }, [favoriteEvents]);
+
   const loading =
     (artistsLoading && artists.length === 0) || (timelineLoading && !timelineData);
 
@@ -175,7 +213,10 @@ export default function FavoritesScreen() {
 
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: 160 + Math.max(insets.bottom, 24) },
+          ]}
           bounces={false}
           overScrollMode="never"
         >
@@ -317,6 +358,26 @@ export default function FavoritesScreen() {
             </>
           )}
         </ScrollView>
+
+        <View style={styles.shareFabContainer} pointerEvents="box-none">
+          <TouchableOpacity
+            style={[
+              styles.shareFab,
+              shareDisabled && styles.shareFabDisabled,
+              { bottom: Math.max(insets.bottom + 24, 32) },
+            ]}
+            onPress={handleShareProgram}
+            disabled={shareDisabled}
+            activeOpacity={0.85}
+            accessibilityLabel="Sdílet můj program"
+          >
+            {shareLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Ionicons name="share-social" size={22} color="#fff" />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </>
   );
@@ -351,7 +412,32 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingTop: HEADER_HEIGHT + 10,
     paddingHorizontal: 16,
-    paddingBottom: 30,
+  },
+  shareFabContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  shareFab: {
+    position: 'absolute',
+    right: 24,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#D14D75',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+  },
+  shareFabDisabled: {
+    backgroundColor: '#6B2E45',
+    opacity: 0.5,
   },
   emptyContainer: {
     paddingVertical: 48,

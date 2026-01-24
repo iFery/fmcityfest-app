@@ -67,8 +67,20 @@ class DeepLinkService {
       const parsed = Linking.parse(url);
       
       // Extract path and params
-      const path = parsed.path || '';
+      const hostname = parsed.hostname || '';
+      const rawPath = parsed.path || '';
+      const path = hostname && rawPath
+        ? `${hostname}/${rawPath}`
+        : hostname || rawPath;
       const queryParams = parsed.queryParams || {};
+
+      console.log('[DeepLinkService] Parsed URL pieces:', {
+        path: rawPath,
+        queryParams,
+        hostname,
+        scheme: parsed.scheme,
+        combinedPath: path,
+      });
 
       // Parse to navigation params using our linking config
       const navParams = this.parseURLToNavParams(path, queryParams);
@@ -79,6 +91,8 @@ class DeepLinkService {
         navigationQueue.enqueue('HomeMain');
         return;
       }
+
+      console.log('[DeepLinkService] Parsed deep link ->', navParams.screen, navParams.params || null);
 
       // Validate parameters
       const validation = validateNavigationParams(navParams.screen, navParams.params);
@@ -113,6 +127,19 @@ class DeepLinkService {
     // Remove leading slash
     const cleanPath = path.startsWith('/') ? path.slice(1) : path;
 
+    // Handle shared programs: p/:code
+    if (cleanPath.startsWith('p/')) {
+      const code = cleanPath.split('/')[1] || queryParams.code;
+      if (code) {
+        return {
+          screen: 'SharedProgram',
+          params: {
+            code: String(code).toUpperCase(),
+          },
+        };
+      }
+    }
+
     // Handle artist detail: artist/:artistId
     if (cleanPath.startsWith('artist/')) {
       const artistId = cleanPath.split('/')[1] || queryParams.artistId;
@@ -127,6 +154,20 @@ class DeepLinkService {
           },
         };
       }
+    }
+
+    // Handle nested artist paths (home/artist/:id, program/artist/:id, etc.)
+    const nestedArtistMatch = cleanPath.match(/^[a-z-]+\/artist\/(.+)$/);
+    if (nestedArtistMatch && nestedArtistMatch[1]) {
+      return {
+        screen: 'ArtistDetail',
+        params: {
+          artistId: String(nestedArtistMatch[1]),
+          artistName: queryParams.artistName
+            ? decodeURIComponent(String(queryParams.artistName))
+            : 'Interpret',
+        },
+      };
     }
 
     // Handle news detail: news/:newsId
@@ -145,6 +186,19 @@ class DeepLinkService {
       }
     }
 
+    const nestedNewsMatch = cleanPath.match(/^[a-z-]+\/news\/(.+)$/);
+    if (nestedNewsMatch && nestedNewsMatch[1]) {
+      return {
+        screen: 'NewsDetail',
+        params: {
+          newsId: String(nestedNewsMatch[1]),
+          newsTitle: queryParams.newsTitle
+            ? decodeURIComponent(String(queryParams.newsTitle))
+            : 'Novinka',
+        },
+      };
+    }
+
     // Handle simple routes
     const routeMap: Record<string, keyof RootStackParamList> = {
       'home': 'HomeMain',
@@ -158,6 +212,34 @@ class DeepLinkService {
       'faq': 'FAQ',
       'map': 'Map',
       'debug': 'Debug',
+      'home/settings': 'Settings',
+      'home/partners': 'Partners',
+      'home/news': 'News',
+      'home/faq': 'FAQ',
+      'home/map': 'Map',
+      'program/settings': 'Settings',
+      'program/partners': 'Partners',
+      'program/news': 'News',
+      'program/faq': 'FAQ',
+      'program/map': 'Map',
+      'artists/settings': 'Settings',
+      'artists/partners': 'Partners',
+      'artists/news': 'News',
+      'artists/faq': 'FAQ',
+      'artists/map': 'Map',
+      'favorites/settings': 'Settings',
+      'favorites/partners': 'Partners',
+      'favorites/news': 'News',
+      'favorites/faq': 'FAQ',
+      'favorites/map': 'Map',
+      'info/settings': 'Settings',
+      'info/partners': 'Partners',
+      'info/news': 'News',
+      'info/faq': 'FAQ',
+      'info/map': 'Map',
+      'info/notifications': 'Notifications',
+      'info/feedback': 'Feedback',
+      'info/about-app': 'AboutApp',
     };
 
     if (routeMap[cleanPath]) {

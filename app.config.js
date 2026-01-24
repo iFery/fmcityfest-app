@@ -155,6 +155,8 @@ module.exports = ({ config }) => {
   const apiUrl = process.env.API_URL || 'https://www.fmcityfest.cz/api/mobile-app';
   const feedbackApiUrl = process.env.FEEDBACK_API_URL || 'https://www.fmcityfest.cz/api/mobile-app/feedback-form.php';
   const feedbackApiKey = process.env.FEEDBACK_API_KEY || 'dev-feedback-key';
+  const sharedProgramApiUrl = process.env.SHARED_PROGRAM_API_URL || 'https://www.fmcityfest.cz/api/mobile-app/shared-program';
+  const sharedProgramShareUrl = process.env.SHARED_PROGRAM_SHARE_URL || 'https://www.fmcityfest.cz/p';
 
   // Firebase configuration files
   // Build script copies files from config/firebase/{env}/ to root
@@ -199,7 +201,7 @@ module.exports = ({ config }) => {
         },
         package: 'com.fmcityfest.app',
         googleServicesFile: androidGoogleServicesFile,
-        versionCode: 24, // Increment this for each release to Google Play
+        versionCode: 25, // Increment this for each release to Google Play
         permissions: [
           'com.google.android.gms.permission.AD_ID', // Required for advertising ID usage (Android 13+)
         ],
@@ -281,6 +283,8 @@ module.exports = ({ config }) => {
         apiUrl,
         feedbackApiUrl,
         feedbackApiKey,
+        sharedProgramApiUrl,
+        sharedProgramShareUrl,
         environment,
         isProduction,
         isDevelopment,

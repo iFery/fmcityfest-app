@@ -18,135 +18,143 @@ export type RootStackParamList = {
   Map: undefined;
   Debug: undefined;
   Notifications: undefined;
+  SharedProgram: { code: string };
 };
 
 const prefix = Linking.createURL('/');
 
 export const linking = {
-  prefixes: [prefix, 'fmcityfest://'],
+  prefixes: [prefix, 'fmcityfest://', 'https://www.fmcityfest.cz', 'https://fmcityfest.cz'],
   config: {
     screens: {
       Home: {
         screens: {
           HomeMain: 'home',
           ArtistDetail: {
-            path: 'artist/:artistId',
+            path: 'home/artist/:artistId',
             parse: {
               artistId: (artistId: string) => artistId,
               artistName: (artistName: string) => decodeURIComponent(artistName || ''),
             },
           },
           NewsDetail: {
-            path: 'news/:newsId',
+            path: 'home/news/:newsId',
             parse: {
               newsId: (newsId: string) => newsId,
               newsTitle: (newsTitle: string) => decodeURIComponent(newsTitle || ''),
             },
           },
-          Settings: 'settings',
-          Partners: 'partners',
-          News: 'news',
-          FAQ: 'faq',
-          Map: 'map',
+          Settings: 'home/settings',
+          Partners: 'home/partners',
+          News: 'home/news',
+          FAQ: 'home/faq',
+          Map: 'home/map',
         },
       },
       Program: {
         screens: {
           ProgramMain: 'program',
+          ProgramHorizontal: 'program/horizontal',
           ArtistDetail: {
-            path: 'artist/:artistId',
+            path: 'program/artist/:artistId',
             parse: {
               artistId: (artistId: string) => artistId,
               artistName: (artistName: string) => decodeURIComponent(artistName || ''),
             },
           },
           NewsDetail: {
-            path: 'news/:newsId',
+            path: 'program/news/:newsId',
             parse: {
               newsId: (newsId: string) => newsId,
               newsTitle: (newsTitle: string) => decodeURIComponent(newsTitle || ''),
             },
           },
-          Settings: 'settings',
-          Partners: 'partners',
-          News: 'news',
-          FAQ: 'faq',
-          Map: 'map',
+          Settings: 'program/settings',
+          Partners: 'program/partners',
+          News: 'program/news',
+          FAQ: 'program/faq',
+          Map: 'program/map',
         },
       },
       Artists: {
         screens: {
           ArtistsMain: 'artists',
           ArtistDetail: {
-            path: 'artist/:artistId',
+            path: 'artists/profile/:artistId',
             parse: {
               artistId: (artistId: string) => artistId,
               artistName: (artistName: string) => decodeURIComponent(artistName || ''),
             },
           },
           NewsDetail: {
-            path: 'news/:newsId',
+            path: 'artists/news/:newsId',
             parse: {
               newsId: (newsId: string) => newsId,
               newsTitle: (newsTitle: string) => decodeURIComponent(newsTitle || ''),
             },
           },
-          Settings: 'settings',
-          Partners: 'partners',
-          News: 'news',
-          FAQ: 'faq',
-          Map: 'map',
+          Settings: 'artists/settings',
+          Partners: 'artists/partners',
+          News: 'artists/news',
+          FAQ: 'artists/faq',
+          Map: 'artists/map',
         },
       },
       Favorites: {
         screens: {
           FavoritesMain: 'favorites',
+          SharedProgram: {
+            path: 'p/:code',
+            parse: {
+              code: (code: string) => code.toUpperCase(),
+            },
+          },
           ArtistDetail: {
-            path: 'artist/:artistId',
+            path: 'favorites/artist/:artistId',
             parse: {
               artistId: (artistId: string) => artistId,
               artistName: (artistName: string) => decodeURIComponent(artistName || ''),
             },
           },
           NewsDetail: {
-            path: 'news/:newsId',
+            path: 'favorites/news/:newsId',
             parse: {
               newsId: (newsId: string) => newsId,
               newsTitle: (newsTitle: string) => decodeURIComponent(newsTitle || ''),
             },
           },
-          Settings: 'settings',
-          Partners: 'partners',
-          News: 'news',
-          FAQ: 'faq',
-          Map: 'map',
+          Settings: 'favorites/settings',
+          Partners: 'favorites/partners',
+          News: 'favorites/news',
+          FAQ: 'favorites/faq',
+          Map: 'favorites/map',
         },
       },
       Info: {
         screens: {
           InfoMain: 'info',
           ArtistDetail: {
-            path: 'artist/:artistId',
+            path: 'info/artist/:artistId',
             parse: {
               artistId: (artistId: string) => artistId,
               artistName: (artistName: string) => decodeURIComponent(artistName || ''),
             },
           },
           NewsDetail: {
-            path: 'news/:newsId',
+            path: 'info/news/:newsId',
             parse: {
               newsId: (newsId: string) => newsId,
               newsTitle: (newsTitle: string) => decodeURIComponent(newsTitle || ''),
             },
           },
-          Settings: 'settings',
-          Partners: 'partners',
-          News: 'news',
-          FAQ: 'faq',
-          Map: 'map',
-          Notifications: 'notifications',
-          Feedback: 'feedback',
-          AboutApp: 'about-app',
+          Settings: 'info/settings',
+          Partners: 'info/partners',
+          News: 'info/news',
+          FAQ: 'info/faq',
+          Map: 'info/map',
+          Notifications: 'info/notifications',
+          Feedback: 'info/feedback',
+          AboutApp: 'info/about-app',
         },
       },
     },

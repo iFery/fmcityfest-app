@@ -41,6 +41,16 @@ export function TimelineProvider({ children, initialData }: TimelineProviderProp
   const [loading, setLoading] = useState(!initialData); // Only loading if no initial data
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!initialData) {
+      return;
+    }
+
+    setTimelineData((current) => (current === initialData ? current : initialData));
+    setLoading(false);
+    setError(null);
+  }, [initialData]);
+
   const loadTimeline = useCallback(async () => {
     try {
       setLoading(true);

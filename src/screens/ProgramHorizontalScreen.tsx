@@ -329,22 +329,23 @@ export default function ProgramHorizontalScreen() {
                           );
                           const left = offsetHours * HOUR_WIDTH;
                           const width = Math.max(MIN_CARD_WIDTH, durationHours * HOUR_WIDTH);
-                          const isFavorite = event.id ? favoriteEvents.includes(event.id) : false;
+                          const eventId = event.id ? String(event.id) : null;
+                          const isFavorite = eventId ? favoriteEvents.includes(eventId) : false;
 
                           return (
                             <TouchableOpacity
                               key={`${event.id}-${i}`}
                               onPress={() => handleEventPress(event)}
                               onLongPress={async () => {
-                                if (!event.id) return;
-                                const wasFavorite = isEventFavorite(event.id);
-                                toggleEvent(event.id);
+                                if (!eventId) return;
+                                const wasFavorite = isEventFavorite(eventId);
+                                toggleEvent(eventId);
                                 const label = event.name || event.artist || 'Koncert';
                                 const isPastEvent = hasEventEnded(event.start, event.end);
                                 logEvent('favorite_change', {
                                   action: wasFavorite ? 'remove' : 'add',
                                   entity_type: 'event',
-                                  event_id: event.id,
+                                  event_id: eventId,
                                   artist_id: event.interpret_id,
                                   source: 'program_horizontal_longpress',
                                 });

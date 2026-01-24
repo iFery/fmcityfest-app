@@ -13,6 +13,7 @@ interface FavoritesStore {
   toggleArtistFavorite: (artistId: string) => void;
   isEventFavorite: (eventId: string) => boolean;
   isArtistFavorite: (artistId: string) => boolean;
+  setFavorites: (eventIds: string[]) => void;
   clearAll: () => void;
   clearLegacyArtists: () => void;
 }
@@ -24,12 +25,17 @@ export const useFavoritesStore = create<FavoritesStore>()(
       favoriteArtists: [],
 
       toggleEventFavorite: (eventId: string) => {
+        const normalizedId = String(eventId).trim();
+        if (!normalizedId) {
+          return;
+        }
+
         set((state) => {
-          const isFavorite = state.favoriteEvents.includes(eventId);
+          const isFavorite = state.favoriteEvents.includes(normalizedId);
           return {
             favoriteEvents: isFavorite
-              ? state.favoriteEvents.filter((id) => id !== eventId)
-              : [...state.favoriteEvents, eventId],
+              ? state.favoriteEvents.filter((id) => id !== normalizedId)
+              : [...state.favoriteEvents, normalizedId],
           };
         });
       },
@@ -46,11 +52,29 @@ export const useFavoritesStore = create<FavoritesStore>()(
       },
 
       isEventFavorite: (eventId: string) => {
-        return get().favoriteEvents.includes(eventId);
+        const normalizedId = String(eventId).trim();
+        if (!normalizedId) {
+          return false;
+        }
+        return get().favoriteEvents.includes(normalizedId);
       },
 
       isArtistFavorite: (artistId: string) => {
         return get().favoriteArtists.includes(artistId);
+      },
+
+      setFavorites: (eventIds: string[]) => {
+        const normalized = Array.from(
+          new Set(
+            eventIds
+              .map((id) => String(id).trim())
+              .filter((id) => id.length > 0)
+          )
+        );
+
+        set({
+          favoriteEvents: normalized,
+        });
       },
 
       clearAll: () => {
