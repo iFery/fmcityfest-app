@@ -199,7 +199,7 @@ module.exports = ({ config }) => {
         },
         package: 'com.fmcityfest.app',
         googleServicesFile: androidGoogleServicesFile,
-        versionCode: 23, // Increment this for each release to Google Play
+        versionCode: 24, // Increment this for each release to Google Play
         permissions: [
           'com.google.android.gms.permission.AD_ID', // Required for advertising ID usage (Android 13+)
         ],

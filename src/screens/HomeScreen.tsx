@@ -12,14 +12,12 @@ import {
   ActivityIndicator,
   Linking,
   Modal,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
-import { WebView } from 'react-native-webview';
 import { RootStackParamList } from '../navigation/linking';
 import { TabParamList } from '../navigation/TabNavigator';
 import { usePartners } from '../hooks/usePartners';
@@ -29,6 +27,7 @@ import { useTheme } from '../theme/ThemeProvider';
 import { logEvent } from '../services/analytics';
 import { useScreenView } from '../hooks/useScreenView';
 import type { News } from '../types';
+import { WebView } from 'react-native-webview';
 
 type HomeScreenNavigationProp = CompositeNavigationProp<
   NativeStackNavigationProp<RootStackParamList>,
@@ -160,13 +159,13 @@ export default function HomeScreen() {
     tile.onPress();
   };
 
-  const openChat = () => {
-    logEvent('chat_widget_open', { source: 'home' });
+  const handleChatPress = () => {
+    logEvent('chat_widget_open', { source: 'home_fab' });
     setChatVisible(true);
   };
 
-  const closeChat = () => {
-    logEvent('chat_widget_close', { source: 'home' });
+  const handleChatClose = () => {
+    logEvent('chat_widget_close', { source: 'home_fab' });
     setChatVisible(false);
   };
 
@@ -326,7 +325,7 @@ export default function HomeScreen() {
           <View style={styles.chatButtonContainer} pointerEvents="box-none">
             <TouchableOpacity
               style={styles.chatFab}
-              onPress={openChat}
+              onPress={handleChatPress}
               activeOpacity={0.85}
               accessibilityLabel="Otevřít chat"
             >
@@ -335,36 +334,37 @@ export default function HomeScreen() {
           </View>
         </ImageBackground>
       </View>
-      <Modal
-        transparent
-        animationType="fade"
-        visible={chatVisible}
-        onRequestClose={closeChat}
-      >
-        <TouchableWithoutFeedback onPress={closeChat}>
-          <View style={styles.chatModalBackdrop}>
-            <TouchableWithoutFeedback>
-              <View style={styles.chatModalBody}>
-                <View style={styles.chatModalHeader}>
-                  <Text style={[globalStyles.heading, styles.chatModalTitle]}>Chat s námi</Text>
-                  <TouchableOpacity onPress={closeChat} style={styles.chatCloseButton} accessibilityLabel="Zavřít chat">
-                    <Ionicons name="close" size={20} color="#FFFFFF" />
-                  </TouchableOpacity>
+      <Modal transparent animationType="fade" visible={chatVisible} onRequestClose={handleChatClose}>
+        <View style={styles.chatModalBackdrop}>
+          <Pressable
+            style={styles.chatModalOverlay}
+            onPress={handleChatClose}
+            accessibilityLabel="Zavřít chat"
+            accessibilityRole="button"
+          />
+          <View style={styles.chatModalBody}>
+            <View style={styles.chatModalHeader}>
+              <Text style={[globalStyles.heading, styles.chatModalTitle]}>Chat s námi</Text>
+              <TouchableOpacity
+                onPress={handleChatClose}
+                style={styles.chatCloseButton}
+                accessibilityLabel="Zavřít chat"
+              >
+                <Ionicons name="close" size={20} color="#FFFFFF" />
+              </TouchableOpacity>
+            </View>
+            <WebView
+              source={{ uri: CHAT_WIDGET_URL }}
+              style={styles.chatWebview}
+              startInLoadingState
+              renderLoading={() => (
+                <View style={styles.chatLoading}>
+                  <ActivityIndicator size="small" color="#21AAB0" />
                 </View>
-                <WebView
-                  source={{ uri: CHAT_WIDGET_URL }}
-                  style={styles.chatWebview}
-                  startInLoadingState
-                  renderLoading={() => (
-                    <View style={styles.chatLoading}>
-                      <ActivityIndicator size="small" color="#21AAB0" />
-                    </View>
-                  )}
-                />
-              </View>
-            </TouchableWithoutFeedback>
+              )}
+            />
           </View>
-        </TouchableWithoutFeedback>
+        </View>
       </Modal>
     </>
   );
@@ -557,6 +557,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
   },
+  chatModalOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 0,
+  },
   chatModalBody: {
     width: '100%',
     maxWidth: 420,
@@ -564,6 +568,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#002239',
     borderWidth: 1,
     borderColor: '#163F59',
+    position: 'relative',
+    zIndex: 1,
   },
   chatModalHeader: {
     flexDirection: 'row',

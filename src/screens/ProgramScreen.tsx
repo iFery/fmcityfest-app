@@ -732,14 +732,14 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: '#3AB4FF',
+    backgroundColor: '#EA5178',
   },
   currentTimeLineHours: {
     position: 'absolute',
     left: 0,
     right: 0,
     height: 2,
-    backgroundColor: '#3AB4FF',
+    backgroundColor: '#EA5178',
     zIndex: 5,
   },
   eventBlock: {
