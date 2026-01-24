@@ -30,6 +30,7 @@ import Toast from '../components/Toast';
 import { useTheme } from '../theme/ThemeProvider';
 import { logEvent } from '../services/analytics';
 import { useScreenView } from '../hooks/useScreenView';
+import { hasEventEnded } from '../utils/eventTime';
 
 dayjs.locale('cs');
 dayjs.extend(utc);
@@ -40,6 +41,9 @@ type ProgramScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>
 
 const HEADER_HEIGHT = 130;
 const PIXELS_PER_HOUR = 80;
+const STAGE_HEADER_HEIGHT = 45;
+const COMPACT_EVENT_HEIGHT_THRESHOLD = 65;
+const LONG_EVENT_NAME_CHAR_THRESHOLD = 20;
 
 interface TimelineEvent {
   id: string;
@@ -50,6 +54,15 @@ interface TimelineEvent {
   stage?: string;
   interpret_id?: string;
   [key: string]: unknown;
+}
+
+interface StageEventLayout {
+  event: TimelineEvent;
+  start: dayjs.Dayjs;
+  end: dayjs.Dayjs;
+  top: number;
+  height: number;
+  key: string;
 }
 
 export default function ProgramScreen() {
@@ -116,12 +129,21 @@ export default function ProgramScreen() {
 
   const { timelineData, loading: timelineLoading, refetch: refetchTimeline } = useTimeline();
   const [day, setDay] = useState<'dayOne' | 'dayTwo'>('dayOne');
+  const [currentTime, setCurrentTime] = useState(dayjs());
 
   useFocusEffect(
     React.useCallback(() => {
       refetchTimeline();
     }, [refetchTimeline])
   );
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setCurrentTime(dayjs());
+    }, 60000);
+
+    return () => clearInterval(intervalId);
+  }, []);
 
   useEffect(() => {
     if (!timelineData) return;
@@ -254,6 +276,38 @@ export default function ProgramScreen() {
     return hours;
   }, [timelineData, day]);
 
+  const currentTimeIndicator = useMemo(() => {
+    if (!timelineData) {
+      return { visible: false, position: 0, label: '' };
+    }
+
+    const config = timelineData.config[day];
+    if (!config) {
+      return { visible: false, position: 0, label: '' };
+    }
+
+    const dayStart = dayjs(config.start);
+    const dayEnd = dayjs(config.end);
+
+    if (currentTime.isBefore(dayStart) || currentTime.isAfter(dayEnd)) {
+      return { visible: false, position: 0, label: '' };
+    }
+
+    const totalMinutes = Math.max(dayEnd.diff(dayStart, 'minute'), 1);
+    const elapsedMinutes = currentTime.diff(dayStart, 'minute');
+    const clampedMinutes = Math.min(Math.max(elapsedMinutes, 0), totalMinutes);
+    const position = (clampedMinutes / 60) * PIXELS_PER_HOUR;
+
+    return {
+      visible: true,
+      position,
+      label: currentTime.format('HH:mm'),
+    };
+  }, [timelineData, day, currentTime]);
+
+  const showCurrentTime = currentTimeIndicator.visible;
+  const currentTimeOffset = currentTimeIndicator.position;
+
   const handleEventPress = (event: TimelineEvent) => {
     if (event.interpret_id) {
       logEvent('event_open', {
@@ -356,6 +410,29 @@ export default function ProgramScreen() {
               {stagesConfig.map((stage) => {
                 const currentDayStart = dayjs(timelineData.config[day].start);
                 const stageEvents = dayEvents.filter((ev) => ev.stage === stage.stage);
+                const stageEventLayouts = stageEvents
+                  .map((event, i): StageEventLayout | null => {
+                    if (!event.start || !event.end) return null;
+
+                    const start = dayjs(event.start);
+                    const end = dayjs(event.end);
+                    const top = (start.diff(currentDayStart, 'minute') / 60) * PIXELS_PER_HOUR;
+                    const height = Math.max(
+                      40,
+                      (end.diff(start, 'minute') / 60) * PIXELS_PER_HOUR
+                    );
+
+                    return {
+                      event,
+                      start,
+                      end,
+                      top,
+                      height,
+                      key: `${event.id}-${i}`,
+                    };
+                  })
+                  .filter((layout): layout is StageEventLayout => layout !== null);
+                const eventColor = stage.stageColorsArtist || stage.stageColors;
 
                 return (
                   <View key={stage.stage} style={styles.stageColumn}>
@@ -370,32 +447,46 @@ export default function ProgramScreen() {
                       {timeline.map((_, i) => (
                         <View key={i} style={styles.timelineSlot} />
                       ))}
-
-                      {stageEvents.map((event, i) => {
-                        if (!event.start || !event.end) return null;
-
-                        const start = dayjs(event.start);
-                        const end = dayjs(event.end);
-                        const top =
-                          (start.diff(currentDayStart, 'minute') / 60) * PIXELS_PER_HOUR;
-                        const height = Math.max(
-                          40,
-                          (end.diff(start, 'minute') / 60) * PIXELS_PER_HOUR
-                        );
-
-                        const isFavorite = event.id
-                          ? favoriteEvents.includes(event.id)
-                          : false;
+                      {stageEventLayouts.map(({ key, top, height }) => (
+                        <View
+                          key={`bg-${key}`}
+                          pointerEvents="none"
+                          style={[
+                            styles.eventBackground,
+                            {
+                              top,
+                              height,
+                              backgroundColor: eventColor,
+                            },
+                          ]}
+                        />
+                      ))}
+                      {showCurrentTime && (
+                        <View
+                          pointerEvents="none"
+                          style={[
+                            styles.currentTimeLine,
+                            { top: currentTimeOffset },
+                          ]}
+                        />
+                      )}
+                      {stageEventLayouts.map(({ key, event, start, end, top, height }) => {
+                        const isFavorite = event.id ? favoriteEvents.includes(event.id) : false;
+                        const eventNameLength = (event.name || '').length;
+                        const isCompactEvent =
+                          height <= COMPACT_EVENT_HEIGHT_THRESHOLD &&
+                          eventNameLength >= LONG_EVENT_NAME_CHAR_THRESHOLD;
 
                         return (
                           <TouchableOpacity
-                            key={`${event.id}-${i}`}
+                            key={key}
                             onPress={() => handleEventPress(event)}
                             onLongPress={async () => {
                               if (!event.id) return;
                               const wasFavorite = isEventFavorite(event.id);
                               toggleEvent(event.id);
                               const label = event.name || event.artist || 'Koncert';
+                              const isPastEvent = hasEventEnded(event.start, event.end);
                               logEvent('favorite_change', {
                                 action: wasFavorite ? 'remove' : 'add',
                                 entity_type: 'event',
@@ -404,7 +495,7 @@ export default function ProgramScreen() {
                                 source: 'program_longpress',
                               });
                               if (!wasFavorite) {
-                                await handleFavoriteAdded(label);
+                                await handleFavoriteAdded(label, { isPastEvent });
                               } else {
                                 await handleFavoriteRemoved(label);
                               }
@@ -415,20 +506,33 @@ export default function ProgramScreen() {
                               {
                                 top,
                                 height,
-                                backgroundColor:
-                                  stage.stageColorsArtist || stage.stageColors,
                               },
                             ]}
                             activeOpacity={0.8}
                           >
-                            <View style={styles.eventContent}>
+                            <View
+                              style={[
+                                styles.eventContent,
+                                isCompactEvent && styles.eventContentCompact,
+                              ]}
+                            >
                               <Text
-                                style={[globalStyles.heading, styles.eventName ]}
+                                style={[
+                                  globalStyles.heading,
+                                  styles.eventName,
+                                  isCompactEvent && styles.eventNameCompact,
+                                ]}
                                 numberOfLines={2}
                               >
                                 {event.name}
                               </Text>
-                              <Text style={[globalStyles.text, styles.eventTime ]}>
+                              <Text
+                                style={[
+                                  globalStyles.text,
+                                  styles.eventTime,
+                                  isCompactEvent && styles.eventTimeCompact,
+                                ]}
+                              >
                                 {start.format('HH:mm')} – {end.format('HH:mm')}
                               </Text>
                             </View>
@@ -586,7 +690,8 @@ const styles = StyleSheet.create({
   },
   hoursColumn: {
     width: 60,
-    paddingTop: 45,
+    paddingTop: STAGE_HEADER_HEIGHT,
+    position: 'relative',
   },
   hourSlot: {
     height: PIXELS_PER_HOUR,
@@ -602,7 +707,7 @@ const styles = StyleSheet.create({
   stageHeader: {
     paddingVertical: 10,
     alignItems: 'center',
-    minHeight: 45,
+    minHeight: STAGE_HEADER_HEIGHT,
     justifyContent: 'center',
   },
   stageHeaderTitle: {
@@ -622,6 +727,21 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#002239',
   },
+  currentTimeLine: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#3AB4FF',
+  },
+  currentTimeLineHours: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    height: 2,
+    backgroundColor: '#3AB4FF',
+    zIndex: 5,
+  },
   eventBlock: {
     position: 'absolute',
     left: 0,
@@ -630,20 +750,36 @@ const styles = StyleSheet.create({
     padding: 4,
     minHeight: 40,
   },
+  eventBackground: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+  },
   eventContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  eventContentCompact: {
+    paddingHorizontal: 2,
   },
   eventName: {
     color: 'white',
     textAlign: 'center',
     fontSize: 12,
   },
+  eventNameCompact: {
+    fontSize: 10,
+    lineHeight: 12,
+  },
   eventTime: {
     marginTop: 0,
     textAlign: 'center',
     fontSize: 12,
+  },
+  eventTimeCompact: {
+    fontSize: 10,
   },
   eventFavoriteIcon: {
     position: 'absolute',

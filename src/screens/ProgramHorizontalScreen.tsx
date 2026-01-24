@@ -27,6 +27,7 @@ import { useTimeline } from '../contexts/TimelineContext';
 import { RootStackParamList } from '../navigation/linking';
 import { logEvent } from '../services/analytics';
 import { useScreenView } from '../hooks/useScreenView';
+import { hasEventEnded } from '../utils/eventTime';
 
 dayjs.locale('cs');
 dayjs.extend(utc);
@@ -339,6 +340,7 @@ export default function ProgramHorizontalScreen() {
                                 const wasFavorite = isEventFavorite(event.id);
                                 toggleEvent(event.id);
                                 const label = event.name || event.artist || 'Koncert';
+                                const isPastEvent = hasEventEnded(event.start, event.end);
                                 logEvent('favorite_change', {
                                   action: wasFavorite ? 'remove' : 'add',
                                   entity_type: 'event',
@@ -347,7 +349,7 @@ export default function ProgramHorizontalScreen() {
                                   source: 'program_horizontal_longpress',
                                 });
                                 if (!wasFavorite) {
-                                  await handleFavoriteAdded(label);
+                                  await handleFavoriteAdded(label, { isPastEvent });
                                 } else {
                                   await handleFavoriteRemoved(label);
                                 }

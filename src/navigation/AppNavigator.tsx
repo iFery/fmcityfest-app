@@ -35,6 +35,8 @@ export function navigate(name: 'Partners'): void;
 export function navigate(name: 'News'): void;
 export function navigate(name: 'NewsDetail', params: { newsId: string; newsTitle: string }): void;
 export function navigate(name: 'FAQ'): void;
+export function navigate(name: 'AboutApp'): void;
+export function navigate(name: 'Feedback'): void;
 export function navigate(
   name: keyof RootStackParamList,
   params?: RootStackParamList[keyof RootStackParamList]

@@ -7,6 +7,8 @@ export type RootStackParamList = {
   ArtistsMain: undefined;
   FavoritesMain: undefined;
   InfoMain: undefined;
+  AboutApp: undefined;
+  Feedback: undefined;
   ArtistDetail: { artistId: string; artistName: string };
   NewsDetail: { newsId: string; newsTitle: string };
   Settings: undefined;
@@ -143,6 +145,8 @@ export const linking = {
           FAQ: 'faq',
           Map: 'map',
           Notifications: 'notifications',
+          Feedback: 'feedback',
+          AboutApp: 'about-app',
         },
       },
     },

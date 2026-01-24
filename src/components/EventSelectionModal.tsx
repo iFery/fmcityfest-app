@@ -41,7 +41,7 @@ interface EventSelectionModalProps {
   artistName: string;
   events: TimelineEvent[];
   favoriteEventIds: string[];
-  onToggleEvent: (eventId: string, eventName?: string) => void;
+  onToggleEvent: (event: TimelineEvent) => void;
   onDismiss: () => void;
   toastVisible?: boolean;
   toastMessage?: string;
@@ -154,7 +154,7 @@ export default function EventSelectionModal({
                   <TouchableOpacity
                     key={event.id}
                     style={[styles.eventItem, isFavorite && styles.eventItemFavorite]}
-                    onPress={() => onToggleEvent(event.id!, event.name || artistName)}
+                    onPress={() => onToggleEvent({ ...event, name: event.name || artistName })}
                     activeOpacity={0.7}
                   >
                     <View style={styles.eventContent}>

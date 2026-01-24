@@ -28,6 +28,7 @@ import Header from '../components/Header';
 import { useTheme } from '../theme/ThemeProvider';
 import { logEvent } from '../services/analytics';
 import { useScreenView } from '../hooks/useScreenView';
+import { hasEventEnded } from '../utils/eventTime';
 
 dayjs.locale('cs');
 dayjs.extend(localizedFormat);
@@ -116,8 +117,9 @@ export default function ArtistDetailScreen() {
     });
 
     const artistName = artist?.name || 'Interpret';
+    const isPastEvent = hasEventEnded(artistEvents[0]?.start, artistEvents[0]?.end);
     if (!wasFavorite) {
-      await handleFavoriteAdded(artistName);
+      await handleFavoriteAdded(artistName, { isPastEvent });
     } else {
       await handleFavoriteRemoved(artistName);
     }
@@ -196,6 +198,7 @@ export default function ArtistDetailScreen() {
                   const endDate = event.end ? dayjs(event.end) : null;
                   const eventId = event.id || '';
                   const isEventFav = eventId ? favoriteEvents.includes(eventId) : false;
+                  const isPastEvent = hasEventEnded(event.start, event.end);
 
                   return (
                     <View key={event.id || index} style={styles.eventCard}>
@@ -218,7 +221,7 @@ export default function ArtistDetailScreen() {
                                 if (isEventFav) {
                                   await handleFavoriteRemoved(eventName);
                                 } else {
-                                  await handleFavoriteAdded(eventName);
+                                  await handleFavoriteAdded(eventName, { isPastEvent });
                                 }
                               }}
                               style={styles.eventFavoriteButtonHeader}

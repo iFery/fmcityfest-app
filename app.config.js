@@ -153,6 +153,8 @@ module.exports = ({ config }) => {
 
   // API URL - can be overridden by EAS Secrets
   const apiUrl = process.env.API_URL || 'https://www.fmcityfest.cz/api/mobile-app';
+  const feedbackApiUrl = process.env.FEEDBACK_API_URL || 'https://www.fmcityfest.cz/api/mobile-app/feedback-form.php';
+  const feedbackApiKey = process.env.FEEDBACK_API_KEY || 'dev-feedback-key';
 
   // Firebase configuration files
   // Build script copies files from config/firebase/{env}/ to root
@@ -174,7 +176,7 @@ module.exports = ({ config }) => {
       ...config.expo,
       name: 'FM CITY FEST',
       slug: 'fmcityfest-app',
-      version: '1.1.4',
+      version: '1.1.5',
       orientation: 'portrait',
       scheme: 'fmcityfest',
       icon: './assets/icon.png',
@@ -197,7 +199,7 @@ module.exports = ({ config }) => {
         },
         package: 'com.fmcityfest.app',
         googleServicesFile: androidGoogleServicesFile,
-        versionCode: 22, // Increment this for each release to Google Play
+        versionCode: 23, // Increment this for each release to Google Play
         permissions: [
           'com.google.android.gms.permission.AD_ID', // Required for advertising ID usage (Android 13+)
         ],
@@ -277,6 +279,8 @@ module.exports = ({ config }) => {
         },
         // Environment variables accessible via Constants.expoConfig.extra
         apiUrl,
+        feedbackApiUrl,
+        feedbackApiKey,
         environment,
         isProduction,
         isDevelopment,

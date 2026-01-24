@@ -27,6 +27,7 @@ import Header from '../components/Header';
 import { useTheme } from '../theme/ThemeProvider';
 import { logEvent } from '../services/analytics';
 import { useScreenView } from '../hooks/useScreenView';
+import { hasEventEnded } from '../utils/eventTime';
 import type { Artist } from '../types';
 
 type ArtistsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
@@ -193,8 +194,9 @@ export default function ArtistsScreen() {
         source: 'artists_grid',
       });
 
+      const isPastEvent = hasEventEnded(artistEvents[0]?.start, artistEvents[0]?.end);
       if (!wasFavorite) {
-        await handleFavoriteAdded(artist.name || 'Interpret');
+        await handleFavoriteAdded(artist.name || 'Interpret', { isPastEvent });
       } else {
         await handleFavoriteRemoved(artist.name || 'Interpret');
       }
@@ -203,10 +205,13 @@ export default function ArtistsScreen() {
   );
 
   const handleEventToggle = useCallback(
-    async (eventId: string, eventName?: string) => {
+    async (event: TimelineEvent) => {
+      const eventId = event.id;
+      if (!eventId) return;
       const wasFavorite = isEventFavorite(eventId);
       toggleEvent(eventId);
-      const label = eventName || 'Koncert';
+      const label = event.name || 'Koncert';
+      const isPastEvent = hasEventEnded(event.start, event.end);
 
       logEvent('favorite_change', {
         action: wasFavorite ? 'remove' : 'add',
@@ -216,7 +221,7 @@ export default function ArtistsScreen() {
       });
 
       if (!wasFavorite) {
-        await handleFavoriteAdded(label);
+        await handleFavoriteAdded(label, { isPastEvent });
       } else {
         await handleFavoriteRemoved(label);
       }

@@ -12,6 +12,8 @@
     "build:android": "eas build --platform android",
     "build:ios": "eas build --platform ios",
     "build:all": "eas build --platform all",
+    "build:apk": "cd android && ./gradlew assembleRelease",
+    "install:apk": "adb install -r android/app/build/outputs/apk/release/app-release.apk",
     "build:aab": "APP_ENV=production NODE_ENV=production npx expo prebuild --platform android && cd android && APP_ENV=production NODE_ENV=production ./gradlew bundleRelease",
     "build:ios:prod": "APP_ENV=production NODE_ENV=production npx expo prebuild --platform ios",
     "build:aab:clean": "APP_ENV=production NODE_ENV=production npx expo prebuild --clean --platform android && cd android && APP_ENV=production NODE_ENV=production ./gradlew bundleRelease",
@@ -47,7 +49,10 @@
     "expo-build-properties": "~1.0.10",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.20",
+    "expo-device": "~8.0.10",
+    "expo-file-system": "~19.0.21",
     "expo-font": "~14.0.11",
+    "expo-image-picker": "~17.0.10",
     "expo-linking": "~8.0.11",
     "expo-navigation-bar": "~5.0.10",
     "expo-notifications": "~0.32.16",
@@ -59,6 +64,7 @@
     "react-native-image-pan-zoom": "^2.1.12",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
+    "react-native-webview": "13.15.0",
     "zustand": "^4.5.0"
   },
   "devDependencies": {

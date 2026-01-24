@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -15,6 +15,7 @@ interface InfoMenuItem {
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   color?: string;
+  onLongPress?: () => void;
 }
 
 const HEADER_HEIGHT = 130;
@@ -22,8 +23,9 @@ const HEADER_HEIGHT = 130;
 export default function InfoScreen() {
   const navigation = useNavigation<InfoScreenNavigationProp>();
   const { globalStyles } = useTheme();
+  const [showHiddenItems, setShowHiddenItems] = useState(false);
 
-  const menuItems: InfoMenuItem[] = [
+  const baseMenuItems: InfoMenuItem[] = [
     {
       id: 'faq',
       title: 'Časté dotazy',
@@ -53,18 +55,36 @@ export default function InfoScreen() {
       color: '#21AAB0',
     },
     {
-      id: 'notifications',
-      title: 'Notifikace',
-      icon: 'notifications',
-      onPress: () => navigation.navigate('Notifications'),
-      color: '#21AAB0',
-    },
-    {
       id: 'settings',
       title: 'Nastavení',
       icon: 'settings',
       onPress: () => navigation.navigate('Settings'),
       color: '#21AAB0',
+    },
+    {
+      id: 'about',
+      title: 'O aplikaci',
+      icon: 'information-circle',
+      onPress: () => navigation.navigate('AboutApp'),
+      color: '#21AAB0',
+    },
+    {
+      id: 'feedback',
+      title: 'Zpětná vazba',
+      icon: 'chatbox-ellipses',
+      onPress: () => navigation.navigate('Feedback'),
+      onLongPress: () => setShowHiddenItems(true),
+      color: '#21AAB0',
+    },
+  ];
+
+  const hiddenMenuItems: InfoMenuItem[] = [
+    {
+      id: 'notifications',
+      title: 'Notifikace',
+      icon: 'notifications',
+      onPress: () => navigation.navigate('Notifications'),
+      color: '#666',
     },
     {
       id: 'debug',
@@ -74,6 +94,10 @@ export default function InfoScreen() {
       color: '#666',
     },
   ];
+
+  const menuItems = showHiddenItems
+    ? [...baseMenuItems, ...hiddenMenuItems]
+    : baseMenuItems;
 
   return (
     <>
@@ -94,6 +118,7 @@ export default function InfoScreen() {
               <TouchableOpacity
                 style={styles.menuItem}
                 onPress={item.onPress}
+                onLongPress={item.onLongPress}
                 activeOpacity={0.7}
               >
                 <Ionicons name={item.icon} size={24} color={item.color || '#21AAB0'} />

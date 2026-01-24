@@ -11,6 +11,8 @@ import ProgramHorizontalScreen from '../screens/ProgramHorizontalScreen';
 import ArtistsScreen from '../screens/ArtistsScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import InfoScreen from '../screens/InfoScreen';
+import AboutAppScreen from '../screens/AboutAppScreen';
+import FeedbackScreen from '../screens/FeedbackScreen';
 import ArtistDetailScreen from '../screens/ArtistDetailScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import PartnersScreen from '../screens/PartnersScreen';
@@ -104,6 +106,8 @@ function InfoStack() {
   return (
     <Stack.Navigator screenOptions={stackScreenOptions} initialRouteName="InfoMain">
       <Stack.Screen name="InfoMain" component={InfoScreen} />
+      <Stack.Screen name="AboutApp" component={AboutAppScreen} />
+      <Stack.Screen name="Feedback" component={FeedbackScreen} />
       <Stack.Screen name="ArtistDetail" component={ArtistDetailScreen} />
       <Stack.Screen name="Settings" component={SettingsScreen} options={{ headerShown: false }} />
       <Stack.Screen name="Partners" component={PartnersScreen} />

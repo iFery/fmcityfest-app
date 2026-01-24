@@ -16,6 +16,10 @@ interface UseFavoriteFeedbackOptions {
   promptStyle?: PromptStyle;
 }
 
+interface FavoriteAddOptions {
+  isPastEvent?: boolean;
+}
+
 interface ToastAction {
   label: string;
   onPress: () => void;
@@ -28,7 +32,7 @@ interface FavoriteFeedbackResult {
   toastAction?: ToastAction;
   permissionModalVisible: boolean;
   hideToast: () => void;
-  handleFavoriteAdded: (label: string) => Promise<void>;
+  handleFavoriteAdded: (label: string, options?: FavoriteAddOptions) => Promise<void>;
   handleFavoriteRemoved: (label: string) => Promise<void>;
   handlePermissionAccept: () => Promise<void>;
   handlePermissionDismiss: () => void;
@@ -74,6 +78,7 @@ export function useFavoriteFeedback(
         `🎶 ${label} je v Mém programu – připomeneme ti ho před koncertem.`,
       addedDenied: (label: string) =>
         `${label} uložen. Zapni notifikace, ať ho nezmeškáš.`,
+      addedPast: (label: string) => `🎶 ${label} přidán do Mého programu.`,
       removedGranted: (label: string) =>
         `${label} odebrán – upozornění zrušeno.`,
       removedDenied: (label: string) =>
@@ -83,8 +88,12 @@ export function useFavoriteFeedback(
   );
 
   const handleFavoriteAdded = useCallback(
-    async (label: string) => {
+    async (label: string, options?: FavoriteAddOptions) => {
       const safeLabel = label?.trim() || 'Interpret';
+      if (options?.isPastEvent) {
+        showToast(messageBuilders.addedPast(safeLabel), 2500);
+        return;
+      }
       const { status } = await Notifications.getPermissionsAsync();
       const notificationsEnabled = status === 'granted' && favoriteArtistsNotifications;
 

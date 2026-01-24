@@ -8,14 +8,18 @@ import {
   StatusBar,
   ImageBackground,
   ScrollView,
+  Pressable,
   ActivityIndicator,
   Linking,
+  Modal,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { WebView } from 'react-native-webview';
 import { RootStackParamList } from '../navigation/linking';
 import { TabParamList } from '../navigation/TabNavigator';
 import { usePartners } from '../hooks/usePartners';
@@ -31,12 +35,16 @@ type HomeScreenNavigationProp = CompositeNavigationProp<
   BottomTabNavigationProp<TabParamList>
 >;
 
+const CHAT_WIDGET_URL =
+  'https://widget-page.smartsupp.com/widget/d018080e30eda14c4d90516c6cbd849c698624c2';
+
 export default function HomeScreen() {
   const navigation = useNavigation<HomeScreenNavigationProp>();
   const { partners, loading, error } = usePartners();
   const { news, loading: newsLoading, error: newsError } = useNews();
   const [festivalEdition, setFestivalEdition] = useState<string>('7. ročník');
   const [festivalDate, setFestivalDate] = useState<string>('');
+  const [chatVisible, setChatVisible] = useState(false);
   const { globalStyles } = useTheme();
   useScreenView('Home');
 
@@ -152,21 +160,30 @@ export default function HomeScreen() {
     tile.onPress();
   };
 
+  const openChat = () => {
+    logEvent('chat_widget_open', { source: 'home' });
+    setChatVisible(true);
+  };
+
+  const closeChat = () => {
+    logEvent('chat_widget_close', { source: 'home' });
+    setChatVisible(false);
+  };
+
   const backgroundImage = require('../../assets/background-hp.png');
   const logoImage = require('../../assets/logo.png');
 
   return (
     <>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-      <TouchableOpacity
-        activeOpacity={1}
-        onLongPress={handleLongPress}
-        delayLongPress={3000}
-        style={styles.container}
-      >
+      <View style={styles.container}>
         <ImageBackground source={backgroundImage} style={styles.backgroundImage}>
           <ScrollView contentContainerStyle={styles.scrollContent} bounces={false} overScrollMode="never" refreshControl={undefined}>
-            <View style={styles.content}>
+            <Pressable
+              style={styles.content}
+              onLongPress={handleLongPress}
+              delayLongPress={3000}
+            >
               {/* Logo a nadpis */}
               <View style={styles.logoContainer}>
                 <Image source={logoImage} style={styles.logo} resizeMode="contain" />
@@ -304,10 +321,51 @@ export default function HomeScreen() {
                   <Text style={[globalStyles.heading, styles.showAllBtnText]}>Zobrazit všechny novinky</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </Pressable>
           </ScrollView>
+          <View style={styles.chatButtonContainer} pointerEvents="box-none">
+            <TouchableOpacity
+              style={styles.chatFab}
+              onPress={openChat}
+              activeOpacity={0.85}
+              accessibilityLabel="Otevřít chat"
+            >
+              <Ionicons name="chatbubble-ellipses" size={22} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </ImageBackground>
-      </TouchableOpacity>
+      </View>
+      <Modal
+        transparent
+        animationType="fade"
+        visible={chatVisible}
+        onRequestClose={closeChat}
+      >
+        <TouchableWithoutFeedback onPress={closeChat}>
+          <View style={styles.chatModalBackdrop}>
+            <TouchableWithoutFeedback>
+              <View style={styles.chatModalBody}>
+                <View style={styles.chatModalHeader}>
+                  <Text style={[globalStyles.heading, styles.chatModalTitle]}>Chat s námi</Text>
+                  <TouchableOpacity onPress={closeChat} style={styles.chatCloseButton} accessibilityLabel="Zavřít chat">
+                    <Ionicons name="close" size={20} color="#FFFFFF" />
+                  </TouchableOpacity>
+                </View>
+                <WebView
+                  source={{ uri: CHAT_WIDGET_URL }}
+                  style={styles.chatWebview}
+                  startInLoadingState
+                  renderLoading={() => (
+                    <View style={styles.chatLoading}>
+                      <ActivityIndicator size="small" color="#21AAB0" />
+                    </View>
+                  )}
+                />
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
     </>
   );
 }
@@ -473,5 +531,63 @@ const styles = StyleSheet.create({
     color: '#21AAB0',
     fontSize: 12,
     textAlign: 'center',
+  },
+  chatButtonContainer: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+  },
+  chatFab: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#D14D75',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 6,
+  },
+  chatModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  chatModalBody: {
+    width: '100%',
+    maxWidth: 420,
+    height: '80%',
+    backgroundColor: '#002239',
+    borderWidth: 1,
+    borderColor: '#163F59',
+  },
+  chatModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#0A3652',
+  },
+  chatModalTitle: {
+    color: '#FFFFFF',
+    fontSize: 16,
+  },
+  chatCloseButton: {
+    padding: 4,
+  },
+  chatWebview: {
+    flex: 1,
+    backgroundColor: '#002239',
+  },
+  chatLoading: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#002239',
   },
 });
