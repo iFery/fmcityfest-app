@@ -63,6 +63,15 @@ export function TimelineProvider({ children, initialData }: TimelineProviderProp
     }
   }, []);
 
+  // Apply fresh initial data whenever Bootstrap provides it (after first render)
+  useEffect(() => {
+    if (initialData) {
+      setTimelineData(initialData);
+      setLoading(false);
+      setError(null);
+    }
+  }, [initialData]);
+
   // Load timeline data on mount only if initialData was not provided
   useEffect(() => {
     if (!initialData) {

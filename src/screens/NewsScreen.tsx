@@ -27,6 +27,8 @@ import { useScreenView } from '../hooks/useScreenView';
 
 type NewsScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
+const HEADER_HEIGHT = 130;
+
 export default function NewsScreen() {
   const { globalStyles } = useTheme();
   const navigation = useNavigation<NewsScreenNavigationProp>();
@@ -80,8 +82,6 @@ export default function NewsScreen() {
 
   const keyExtractor = useCallback((item: News) => item.id, []);
 
-  const listHeaderComponent = useMemo(() => <Header title="NOVINKY" />, []);
-
   const listEmptyComponent = useMemo(() => {
     if (error) {
       return (
@@ -112,13 +112,16 @@ export default function NewsScreen() {
     <>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <View style={styles.container}>
+        <View style={styles.stickyHeader}>
+          <Header title="NOVINKY" />
+        </View>
         <FlatList
           data={news}
           renderItem={renderNewsItem}
           keyExtractor={keyExtractor}
-          ListHeaderComponent={listHeaderComponent}
           ListEmptyComponent={listEmptyComponent}
           contentContainerStyle={styles.content}
+          style={styles.list}
           removeClippedSubviews
           maxToRenderPerBatch={10}
           windowSize={5}
@@ -142,14 +145,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#002239',
   },
+  stickyHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: '#002239',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#002239',
   },
+  list: {
+    flex: 1,
+  },
   content: {
-    paddingTop: 0,
+    paddingTop: HEADER_HEIGHT + 20,
     paddingBottom: 50,
     flexGrow: 1,
   },

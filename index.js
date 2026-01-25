@@ -75,7 +75,7 @@ const setupBackgroundMessaging = async () => {
     if (appsLength > 0) {
       try {
         messaging().setBackgroundMessageHandler(async (remoteMessage) => {
-          console.log('Background notification received:', remoteMessage);
+          //console.log('Background notification received:', remoteMessage);
           // Zde můžete zpracovat notifikaci na pozadí
           // Např. aktualizovat lokální databázi, zobrazit lokální notifikaci, atd.
         });

@@ -600,6 +600,7 @@ export default function ProgramScreen() {
         visible={showPrompt}
         onAllowNotifications={handleAccept}
         onDismiss={handleDismiss}
+        source="program-soft-prompt"
       />
       <Toast
         visible={toastVisible}
@@ -612,6 +613,7 @@ export default function ProgramScreen() {
         visible={permissionModalVisible}
         onAllowNotifications={handlePermissionAccept}
         onDismiss={handlePermissionDismiss}
+        source="program-favorite-feedback"
       />
     </>
   );

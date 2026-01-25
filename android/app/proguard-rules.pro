@@ -12,3 +12,10 @@
 -keep class com.facebook.react.turbomodule.** { *; }
 
 # Add any project specific keep options here:
+
+# Expo notifications need their receivers/workers to survive minification
+-keep class expo.modules.notifications.** { *; }
+-dontwarn expo.modules.notifications.**
+
+# Keep Firebase messaging classes referenced via reflection by expo-notifications
+-keep class com.google.firebase.messaging.** { *; }

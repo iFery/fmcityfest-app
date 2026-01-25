@@ -89,7 +89,7 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
           const cacheCleared = await checkAndClearCacheOnVersionUpgrade();
           if (cacheCleared) {
             crashlyticsService.log('cache_cleared_on_version_upgrade');
-            console.log('[Bootstrap] Cache cleared due to app version upgrade');
+            //console.log('[Bootstrap] Cache cleared due to app version upgrade');
           }
         } catch (versionCheckError) {
           console.warn('Error checking version upgrade:', versionCheckError);
@@ -118,11 +118,11 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
         // Only check if online (offline mode should not block app)
         if (isInternetReachable) {
           try {
-            console.log('[Bootstrap] Checking for app updates...');
+            //console.log('[Bootstrap] Checking for app updates...');
             const updateCheckResult = await checkForUpdate();
             if (!isMounted || abortController.signal.aborted) return;
             
-            console.log('[Bootstrap] Update check result:', updateCheckResult);
+            //console.log('[Bootstrap] Update check result:', updateCheckResult);
             
             // Check if user has skipped this version
             const skippedVersion = await AsyncStorage.getItem(UPDATE_SKIP_KEY);
@@ -131,17 +131,17 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
             setUpdateInfo(updateCheckResult);
             
             if (updateCheckResult.type === 'forced') {
-              console.log('[Bootstrap] Forced update required - blocking app');
+              //console.log('[Bootstrap] Forced update required - blocking app');
               crashlyticsService.log('bootstrap_blocked_by_forced_update');
               setState('update-required');
               return; // Stop bootstrap, show update screen (cannot skip forced updates)
             } else if (updateCheckResult.type === 'optional' && !isSkipped) {
-              console.log('[Bootstrap] Optional update available');
+              //console.log('[Bootstrap] Optional update available');
               crashlyticsService.log('bootstrap_optional_update_available');
               setState('update-optional');
               return; // Stop bootstrap, show update screen (user can skip)
             }
-            console.log('[Bootstrap] No update required, continuing bootstrap');
+            //console.log('[Bootstrap] No update required, continuing bootstrap');
             // Continue with normal bootstrap if no update needed or update was skipped
           } catch (updateError) {
             console.error('[Bootstrap] Update check failed, continuing bootstrap:', updateError);
@@ -149,7 +149,7 @@ export function BootstrapProvider({ children }: BootstrapProviderProps) {
             // Continue with bootstrap even if update check fails
           }
         } else {
-          console.log('[Bootstrap] Skipping update check - offline mode');
+          //console.log('[Bootstrap] Skipping update check - offline mode');
         }
 
         // Setup notifications (only listeners, don't request permission here)

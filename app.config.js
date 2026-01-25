@@ -176,7 +176,7 @@ module.exports = ({ config }) => {
       ...config.expo,
       name: 'FM CITY FEST',
       slug: 'fmcityfest-app',
-      version: '1.1.5',
+      version: '1.1.6',
       orientation: 'portrait',
       scheme: 'fmcityfest',
       icon: './assets/icon.png',
@@ -199,8 +199,12 @@ module.exports = ({ config }) => {
         },
         package: 'com.fmcityfest.app',
         googleServicesFile: androidGoogleServicesFile,
-        versionCode: 24, // Increment this for each release to Google Play
+        versionCode: 27, // Increment this for each release to Google Play
         permissions: [
+          // Keep Expo defaults for scheduling local notifications in release builds
+          'android.permission.POST_NOTIFICATIONS',
+          'android.permission.WAKE_LOCK',
+          'android.permission.RECEIVE_BOOT_COMPLETED',
           'com.google.android.gms.permission.AD_ID', // Required for advertising ID usage (Android 13+)
         ],
       },

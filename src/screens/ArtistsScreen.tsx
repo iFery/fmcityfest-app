@@ -395,11 +395,13 @@ export default function ArtistsScreen() {
         visible={showPrompt}
         onAllowNotifications={handleAccept}
         onDismiss={handleDismiss}
+        source="artists-soft-prompt"
       />
       <NotificationPermissionModal
         visible={permissionModalVisible}
         onAllowNotifications={handlePermissionAccept}
         onDismiss={handlePermissionDismiss}
+        source="artists-favorite-feedback"
       />
       <EventSelectionModal
         visible={eventModalVisible}

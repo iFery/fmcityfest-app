@@ -173,7 +173,7 @@ export const initializeFirebase = async (): Promise<void> => {
       // Crashlytics není kritický, pokračujeme
     }
 
-    console.log('Firebase initialized successfully');
+    //console.log('Firebase initialized successfully');
   } catch (error) {
     console.error('❌ Error initializing Firebase:', error);
     // Nehážeme error, aby aplikace mohla pokračovat

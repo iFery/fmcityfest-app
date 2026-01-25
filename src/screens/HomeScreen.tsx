@@ -84,7 +84,7 @@ export default function HomeScreen() {
 
   const handleLongPress = () => {
     // TODO: Navigace na debug obrazovku, pokud bude potřeba
-    console.log('Long press detected');
+    //console.log('Long press detected');
   };
 
   // Filtrujeme pouze Generální partnery

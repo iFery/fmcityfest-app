@@ -27,7 +27,7 @@ export default function NotificationsScreen() {
       const triggerAny = trigger as any;
       
       // Debug logging pro iOS (odkomentuj pro debugging)
-      // console.log('Trigger structure:', JSON.stringify(triggerAny, null, 2));
+      // //console.log('Trigger structure:', JSON.stringify(triggerAny, null, 2));
       
       // Expo-notifications vrací trigger s type a value
       // Na iOS může být value jako timestamp (number) v milisekundách

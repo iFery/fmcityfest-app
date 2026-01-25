@@ -31,6 +31,7 @@ type NewsDetailScreenRouteProp = RouteProp<RootStackParamList, 'NewsDetail'>;
 type NewsDetailScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const CACHE_KEY = 'news';
+const HEADER_HEIGHT = 130;
 
 export default function NewsDetailScreen() {
   const { globalStyles } = useTheme();
@@ -145,8 +146,10 @@ export default function NewsDetailScreen() {
     return (
       <View style={styles.container}>
         <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
-        <Header title="NOVINKY" />
-        <View style={styles.content}>
+        <View style={styles.stickyHeader}>
+          <Header title="NOVINKY" />
+        </View>
+        <View style={styles.errorWrapper}>
           <Text style={[globalStyles.text, styles.errorText]}>{error || 'Novinka nebyla nalezena'}</Text>
         </View>
       </View>
@@ -157,8 +160,16 @@ export default function NewsDetailScreen() {
     <>
       <StatusBar translucent backgroundColor="transparent" barStyle="light-content" />
       <View style={styles.container}>
-        <ScrollView bounces={false} overScrollMode="never" refreshControl={undefined}>
+        <View style={styles.stickyHeader}>
           <Header title="NOVINKY" />
+        </View>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          overScrollMode="never"
+        >
           <View style={styles.content}>
             {news.image_url && (
               <Image source={{ uri: news.image_url }} style={styles.newsImage} resizeMode="cover" />
@@ -183,16 +194,29 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#002239',
   },
+  stickyHeader: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    backgroundColor: '#002239',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#002239',
   },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingTop: HEADER_HEIGHT + 20,
+    paddingBottom: 70,
+  },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
   },
   newsImage: {
     width: '100%',
@@ -213,6 +237,13 @@ const styles = StyleSheet.create({
     color: 'white',
     lineHeight: 24,
     marginBottom: 16,
+  },
+  errorWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: HEADER_HEIGHT + 20,
   },
   errorText: {
     color: 'white',

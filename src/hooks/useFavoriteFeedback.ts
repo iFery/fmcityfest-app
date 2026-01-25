@@ -9,6 +9,7 @@ import { notificationRegistrationService } from '../services/notificationRegistr
 import { useNotificationPreferencesStore } from '../stores/notificationPreferencesStore';
 import { navigate } from '../navigation/AppNavigator';
 import { logEvent } from '../services/analytics';
+import { useNotificationPromptStore } from '../stores/notificationPromptStore';
 
 type PromptStyle = 'modal' | 'toast-action';
 
@@ -38,6 +39,12 @@ interface FavoriteFeedbackResult {
   handlePermissionDismiss: () => void;
 }
 
+const logFavoriteFeedback = (...args: unknown[]) => {
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    console.log('[FavoriteFeedback]', ...args);
+  }
+};
+
 export function useFavoriteFeedback(
   options: UseFavoriteFeedbackOptions = { promptStyle: 'modal' }
 ): FavoriteFeedbackResult {
@@ -49,6 +56,7 @@ export function useFavoriteFeedback(
   const [permissionModalVisible, setPermissionModalVisible] = useState(false);
   const pendingAddRef = useRef<{ label: string } | null>(null);
   const { favoriteArtistsNotifications } = useNotificationPreferencesStore();
+  const { shouldShowPrompt: shouldShowGlobalPrompt, setPromptShown } = useNotificationPromptStore();
 
   const hideToast = useCallback(() => {
     setToastVisible(false);
@@ -87,9 +95,45 @@ export function useFavoriteFeedback(
     []
   );
 
+  const showEnableNotificationsCTA = useCallback(
+    (label: string) => {
+      showToast(
+        messageBuilders.addedDenied(label),
+        4000,
+        {
+          label: 'Povolit notifikace',
+          onPress: async () => {
+            logEvent('notification_prompt', { action: 'accepted', source: 'toast_action' });
+            const nextStatus = await requestSystemPermission();
+            if (nextStatus === 'granted' && favoriteArtistsNotifications) {
+              showToast(messageBuilders.addedGranted(label), 2500);
+            } else if (nextStatus === 'granted' && !favoriteArtistsNotifications) {
+              showToast(
+                messageBuilders.addedDenied(label),
+                4000,
+                {
+                  label: 'Přejít do nastavení',
+                  onPress: () => navigate('Settings'),
+                }
+              );
+            } else {
+              showToast(messageBuilders.addedDenied(label), 2500);
+            }
+          },
+        }
+      );
+    },
+    [favoriteArtistsNotifications, messageBuilders, requestSystemPermission, showToast]
+  );
+
   const handleFavoriteAdded = useCallback(
     async (label: string, options?: FavoriteAddOptions) => {
       const safeLabel = label?.trim() || 'Interpret';
+      logFavoriteFeedback('handleFavoriteAdded called', {
+        label: safeLabel,
+        promptStyle,
+        isPastEvent: options?.isPastEvent ?? false,
+      });
       if (options?.isPastEvent) {
         showToast(messageBuilders.addedPast(safeLabel), 2500);
         return;
@@ -115,43 +159,38 @@ export function useFavoriteFeedback(
       }
 
       if (promptStyle === 'modal') {
+        if (!shouldShowGlobalPrompt()) {
+          logFavoriteFeedback('Prompt suppressed by store flag');
+          showEnableNotificationsCTA(safeLabel);
+          return;
+        }
+
         pendingAddRef.current = { label: safeLabel };
+        setPromptShown(true);
         setPermissionModalVisible(true);
+        logFavoriteFeedback('Permission modal opened after favorite add', {
+          label: safeLabel,
+        });
         return;
       }
 
-      showToast(
-        messageBuilders.addedDenied(safeLabel),
-        4000,
-        {
-          label: 'Povolit notifikace',
-          onPress: async () => {
-            logEvent('notification_prompt', { action: 'accepted', source: 'toast_action' });
-            const nextStatus = await requestSystemPermission();
-            if (nextStatus === 'granted' && favoriteArtistsNotifications) {
-              showToast(messageBuilders.addedGranted(safeLabel), 2500);
-            } else if (nextStatus === 'granted' && !favoriteArtistsNotifications) {
-              showToast(
-                messageBuilders.addedDenied(safeLabel),
-                4000,
-                {
-                  label: 'Přejít do nastavení',
-                  onPress: () => navigate('Settings'),
-                }
-              );
-            } else {
-              showToast(messageBuilders.addedDenied(safeLabel), 2500);
-            }
-          },
-        }
-      );
+      showEnableNotificationsCTA(safeLabel);
     },
-    [favoriteArtistsNotifications, messageBuilders, promptStyle, requestSystemPermission, showToast]
+    [
+      favoriteArtistsNotifications,
+      messageBuilders,
+      promptStyle,
+      shouldShowGlobalPrompt,
+      setPromptShown,
+      showEnableNotificationsCTA,
+      showToast,
+    ]
   );
 
   const handleFavoriteRemoved = useCallback(
     async (label: string) => {
       const safeLabel = label?.trim() || 'Interpret';
+      logFavoriteFeedback('handleFavoriteRemoved called', { label: safeLabel });
       const { status } = await Notifications.getPermissionsAsync();
       if (status === 'granted' && favoriteArtistsNotifications) {
         showToast(messageBuilders.removedGranted(safeLabel), 2500);
@@ -163,6 +202,9 @@ export function useFavoriteFeedback(
   );
 
   const handlePermissionAccept = useCallback(async () => {
+    logFavoriteFeedback('handlePermissionAccept invoked', {
+      pendingLabel: pendingAddRef.current?.label,
+    });
     setPermissionModalVisible(false);
     const status = await requestSystemPermission();
     if (promptStyle === 'modal' && pendingAddRef.current) {
@@ -186,6 +228,9 @@ export function useFavoriteFeedback(
   }, [favoriteArtistsNotifications, messageBuilders, promptStyle, requestSystemPermission, showToast]);
 
   const handlePermissionDismiss = useCallback(() => {
+    logFavoriteFeedback('handlePermissionDismiss invoked', {
+      pendingLabel: pendingAddRef.current?.label,
+    });
     setPermissionModalVisible(false);
     if (promptStyle === 'modal' && pendingAddRef.current) {
       const { label } = pendingAddRef.current;

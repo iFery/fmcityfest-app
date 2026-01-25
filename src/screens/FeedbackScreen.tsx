@@ -167,7 +167,7 @@ export default function FeedbackScreen() {
       setEmail('');
       setPhotos([]);
     } catch (error) {
-      console.log('[FeedbackScreen] Failed to submit feedback', error);
+      //console.log('[FeedbackScreen] Failed to submit feedback', error);
       const fallbackMessage = 'Odeslání selhalo. Zkus to prosím znovu.';
       if (error instanceof Error && error.message?.trim()) {
         setErrorMessage(error.message.trim());

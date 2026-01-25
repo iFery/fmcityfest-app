@@ -2,10 +2,10 @@
  * Preload service - loads all critical data into cache on app startup
  */
 
-import { artistsApi, eventsApi, partnersApi, newsApi, faqApi, type TimelineApiResponse } from '../api';
-import { saveToCache, hasValidCache } from '../utils/cacheManager';
+import { artistsApi, eventsApi, partnersApi, newsApi, faqApi, mapsApi, type TimelineApiResponse } from '../api';
+import { saveToCache, hasValidCache, loadFromCache } from '../utils/cacheManager';
 import { crashlyticsService } from './crashlytics';
-import type { Artist, Event, Partner, News, FAQCategory } from '../types';
+import type { Artist, Event, Partner, News, FAQCategory, MapsData } from '../types';
 
 export interface PreloadProgress {
   total: number;
@@ -54,9 +54,11 @@ export async function preloadAllData(
   const tasks = [
     { name: 'Artists', key: 'artists', fn: preloadArtists },
     { name: 'Events', key: 'events', fn: preloadEvents },
+    { name: 'Timeline', key: 'timeline', fn: preloadTimeline },
     { name: 'Partners', key: 'partners', fn: preloadPartners },
     { name: 'News', key: 'news', fn: preloadNews },
     { name: 'FAQ', key: 'faq', fn: preloadFAQ },
+    { name: 'Maps', key: 'maps', fn: preloadMaps },
   ];
 
   const total = tasks.length;
@@ -94,7 +96,7 @@ export async function preloadAllData(
       const result = await task.fn();
       
       // Capture timeline data from Events task
-      if (task.name === 'Events' && result) {
+      if ((task.name === 'Events' || task.name === 'Timeline') && result) {
         timelineData = result as TimelineApiResponse;
       }
 
@@ -148,7 +150,11 @@ export async function preloadAllData(
   // Extract timeline data from Events task result if not already captured
   if (!timelineData) {
     results.forEach((result, index) => {
-      if (result.status === 'fulfilled' && tasks[index].name === 'Events' && result.value.data) {
+      if (
+        result.status === 'fulfilled' &&
+        (tasks[index].name === 'Events' || tasks[index].name === 'Timeline') &&
+        result.value.data
+      ) {
         timelineData = result.value.data as TimelineApiResponse | null;
       }
     });
@@ -179,7 +185,7 @@ async function preloadArtists(): Promise<void> {
     // Check if cache is valid
     const cacheValid = await hasValidCache('artists');
     if (cacheValid) {
-      console.log('Artists cache is valid, skipping API call');
+      //console.log('Artists cache is valid, skipping API call');
       return;
     }
 
@@ -212,40 +218,65 @@ function transformTimeline(response: TimelineApiResponse): { events: Event[]; ti
   return { events, timeline: response };
 }
 
+let timelineFetchPromise: Promise<TimelineApiResponse | null> | null = null;
+
+async function fetchAndCacheTimeline(): Promise<TimelineApiResponse | null> {
+  if (!timelineFetchPromise) {
+    timelineFetchPromise = (async () => {
+      const response = await eventsApi.getAll();
+      const transformed = transformTimeline(response.data);
+      await saveToCache<Event[]>('events', transformed.events);
+      await saveToCache<TimelineApiResponse>('timeline', transformed.timeline);
+      return transformed.timeline;
+    })();
+  }
+
+  try {
+    return await timelineFetchPromise;
+  } finally {
+    timelineFetchPromise = null;
+  }
+}
+
 /**
  * Preload events (timeline)
  * Returns timeline data for immediate use in TimelineContext
  */
 async function preloadEvents(): Promise<TimelineApiResponse | null> {
   try {
-    // Check if cache is valid
-    const cacheValid = await hasValidCache('events');
-    if (cacheValid) {
-      console.log('Events cache is valid, skipping API call');
-      // Return cached timeline data if available
-      const { loadFromCache } = await import('../utils/cacheManager');
-      return await loadFromCache<TimelineApiResponse>('timeline') || null;
+    const eventsCacheValid = await hasValidCache('events');
+    const timelineCacheValid = await hasValidCache('timeline');
+
+    if (eventsCacheValid && timelineCacheValid) {
+      //console.log('Events and timeline cache are valid, skipping API call');
+      return (await loadFromCache<TimelineApiResponse>('timeline')) || null;
     }
 
-    const response = await eventsApi.getAll();
-    const transformed = transformTimeline(response.data);
-    
-    // Save events array for backward compatibility
-    await saveToCache<Event[]>('events', transformed.events);
-    // Also save full timeline data with config and stages
-    await saveToCache<TimelineApiResponse>('timeline', transformed.timeline);
-    
-    // Return timeline data for immediate use
-    return transformed.timeline;
+    return await fetchAndCacheTimeline();
   } catch (error) {
     console.warn('Failed to preload events, keeping existing cache if available');
     // Try to return cached timeline data even if API call failed
     try {
-      const { loadFromCache } = await import('../utils/cacheManager');
       return await loadFromCache<TimelineApiResponse>('timeline') || null;
     } catch {
       throw error;
     }
+  }
+}
+
+async function preloadTimeline(): Promise<TimelineApiResponse | null> {
+  try {
+    const timelineCacheValid = await hasValidCache('timeline');
+    const eventsCacheValid = await hasValidCache('events');
+
+    if (timelineCacheValid && eventsCacheValid) {
+      return (await loadFromCache<TimelineApiResponse>('timeline')) || null;
+    }
+
+    return await fetchAndCacheTimeline();
+  } catch (error) {
+    console.warn('Failed to preload timeline, keeping existing cache if available', error);
+    return (await loadFromCache<TimelineApiResponse>('timeline')) || null;
   }
 }
 
@@ -257,7 +288,7 @@ async function preloadPartners(): Promise<void> {
     // Check if cache is valid
     const cacheValid = await hasValidCache('partners');
     if (cacheValid) {
-      console.log('Partners cache is valid, skipping API call');
+      //console.log('Partners cache is valid, skipping API call');
       return;
     }
 
@@ -265,6 +296,22 @@ async function preloadPartners(): Promise<void> {
     await saveToCache<Partner[]>('partners', response.data);
   } catch (error) {
     console.warn('Failed to preload partners, keeping existing cache if available');
+    throw error;
+  }
+}
+
+async function preloadMaps(): Promise<void> {
+  try {
+    const cacheValid = await hasValidCache('maps');
+    if (cacheValid) {
+      //console.log('Maps cache is valid, skipping API call');
+      return;
+    }
+
+    const response = await mapsApi.getAll();
+    await saveToCache<MapsData>('maps', response.data);
+  } catch (error) {
+    console.warn('Failed to preload maps, keeping existing cache if available');
     throw error;
   }
 }
@@ -277,7 +324,7 @@ async function preloadNews(): Promise<void> {
     // Check if cache is valid
     const cacheValid = await hasValidCache('news');
     if (cacheValid) {
-      console.log('News cache is valid, skipping API call');
+      //console.log('News cache is valid, skipping API call');
       return;
     }
 
@@ -297,7 +344,7 @@ async function preloadFAQ(): Promise<void> {
     // Check if cache is valid
     const cacheValid = await hasValidCache('faq');
     if (cacheValid) {
-      console.log('FAQ cache is valid, skipping API call');
+      //console.log('FAQ cache is valid, skipping API call');
       return;
     }
 

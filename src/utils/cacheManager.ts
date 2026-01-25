@@ -214,7 +214,7 @@ export async function checkAndClearCacheOnVersionUpgrade(): Promise<boolean> {
 
     // If version changed, clear all cache
     if (storedVersion && storedVersion !== currentVersion) {
-      console.log(`[CacheManager] App version changed from ${storedVersion} to ${currentVersion}, clearing cache`);
+      //console.log(`[CacheManager] App version changed from ${storedVersion} to ${currentVersion}, clearing cache`);
       await clearAllCache();
       await AsyncStorage.setItem(APP_VERSION_KEY, currentVersion);
       return true; // Cache was cleared

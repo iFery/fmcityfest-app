@@ -18,6 +18,12 @@ import { logEvent } from '../services/analytics';
 
 const { width, height } = Dimensions.get('window');
 
+const logPermissionModal = (...args: unknown[]) => {
+  if (typeof __DEV__ !== 'undefined' && __DEV__) {
+    console.log('[NotificationPermissionModal]', ...args);
+  }
+};
+
 interface NotificationPermissionModalProps {
   visible: boolean;
   onAllowNotifications: () => void;
@@ -45,6 +51,7 @@ export default function NotificationPermissionModal({
           source: source || 'unknown',
         });
       }
+      logPermissionModal('Modal became visible', { source: source || 'unknown' });
       fadeAnim.setValue(0);
       slideAnim.setValue(30);
       pulseAnim.setValue(1);
@@ -77,6 +84,7 @@ export default function NotificationPermissionModal({
         ])
       ).start();
     } else {
+      logPermissionModal('Modal hidden', { source: source || 'unknown' });
       fadeAnim.setValue(0);
       slideAnim.setValue(30);
       pulseAnim.setValue(1);
@@ -139,6 +147,7 @@ export default function NotificationPermissionModal({
                   action: 'accepted',
                   source: source || 'unknown',
                 });
+                logPermissionModal('User accepted prompt', { source: source || 'unknown' });
                 onAllowNotifications();
               }}
               activeOpacity={0.85}
@@ -155,6 +164,7 @@ export default function NotificationPermissionModal({
                   action: 'dismissed',
                   source: source || 'unknown',
                 });
+                logPermissionModal('User dismissed prompt', { source: source || 'unknown' });
                 onDismiss();
               }}
               activeOpacity={0.6}

@@ -411,6 +411,7 @@ export default function ProgramHorizontalScreen() {
         visible={permissionModalVisible}
         onAllowNotifications={handlePermissionAccept}
         onDismiss={handlePermissionDismiss}
+        source="program-horizontal-favorite-feedback"
       />
     </>
   );

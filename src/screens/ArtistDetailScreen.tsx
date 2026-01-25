@@ -296,6 +296,7 @@ export default function ArtistDetailScreen() {
         visible={permissionModalVisible}
         onAllowNotifications={handlePermissionAccept}
         onDismiss={handlePermissionDismiss}
+        source="artist-detail-favorite-feedback"
       />
     </>
   );

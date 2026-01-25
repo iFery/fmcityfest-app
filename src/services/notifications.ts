@@ -97,7 +97,7 @@ class NotificationService {
 
       // Listener pro notifikace, když je aplikace na popředí
       const unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
-        console.log('Foreground notification received:', remoteMessage);
+        //console.log('Foreground notification received:', remoteMessage);
         
         // Zobrazíme lokální notifikaci pomocí Expo Notifications
         // (FCM foreground notifikace se nezobrazují automaticky na Androidu)
@@ -157,7 +157,7 @@ class NotificationService {
       }
 
       if (finalStatus !== 'granted') {
-        console.log('Notification permission not granted');
+        //console.log('Notification permission not granted');
         return false;
       }
 
@@ -238,7 +238,7 @@ class NotificationService {
           repeats: false,
         },
       });
-      console.log(`Test notification scheduled for ${seconds} seconds`);
+      //console.log(`Test notification scheduled for ${seconds} seconds`);
     } catch (error) {
       console.error('Error scheduling test notification:', error);
       try {

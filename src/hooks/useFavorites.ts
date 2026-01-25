@@ -4,6 +4,8 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { AppState, AppStateStatus } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { notificationService } from '../services/notifications';
 import { useNotificationPreferencesStore } from '../stores/notificationPreferencesStore';
@@ -53,6 +55,65 @@ export function useFavorites(): UseFavoritesResult {
   const prevNotificationsEnabledRef = useRef<boolean | null>(null);
   const prevLeadTimeMinutesRef = useRef<number | null>(null);
   const isInitialMountRef = useRef(true);
+  const permissionStatusRef = useRef<string | null>(null);
+  const favoriteEventsRef = useRef<string[]>(favoriteEvents);
+
+  useEffect(() => {
+    favoriteEventsRef.current = favoriteEvents;
+  }, [favoriteEvents]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadPermissionStatus = async () => {
+      try {
+        const { status } = await Notifications.getPermissionsAsync();
+        if (mounted) {
+          permissionStatusRef.current = status;
+        }
+      } catch (error) {
+        console.warn('Could not read notification permission status:', error);
+      }
+    };
+
+    loadPermissionStatus();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Reschedule favorite reminders if the user enables system notifications in OS settings
+    const handleAppStateChange = async (nextState: AppStateStatus) => {
+      if (nextState !== 'active') {
+        return;
+      }
+
+      try {
+        const { status } = await Notifications.getPermissionsAsync();
+        const previouslyGranted = permissionStatusRef.current === 'granted';
+        permissionStatusRef.current = status;
+
+        if (
+          status === 'granted' &&
+          !previouslyGranted &&
+          favoriteArtistsNotifications &&
+          favoriteEventsRef.current.length > 0
+        ) {
+          await notificationService.updateAllEventNotifications(favoriteEventsRef.current);
+        }
+      } catch (error) {
+        console.warn('Failed to refresh favorite notifications after permission change:', error);
+      }
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+    };
+  }, [favoriteArtistsNotifications]);
 
   const eventIdToArtistId = useMemo(() => {
     const map = new Map<string, string>();
