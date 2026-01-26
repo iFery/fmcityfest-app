@@ -44,6 +44,7 @@ const PIXELS_PER_HOUR = 80;
 const STAGE_HEADER_HEIGHT = 45;
 const COMPACT_EVENT_HEIGHT_THRESHOLD = 65;
 const LONG_EVENT_NAME_CHAR_THRESHOLD = 20;
+const TIME_OFFSET_HOURS = 0; // např. +10 hodin
 
 interface TimelineEvent {
   id: string;
@@ -129,7 +130,8 @@ export default function ProgramScreen() {
 
   const { timelineData, loading: timelineLoading, refetch: refetchTimeline } = useTimeline();
   const [day, setDay] = useState<'dayOne' | 'dayTwo'>('dayOne');
-  const [currentTime, setCurrentTime] = useState(dayjs());
+  const getNow = () => dayjs().add(TIME_OFFSET_HOURS, 'hour');
+  const [currentTime, setCurrentTime] = useState(getNow());
 
   useFocusEffect(
     React.useCallback(() => {
@@ -139,7 +141,7 @@ export default function ProgramScreen() {
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      setCurrentTime(dayjs());
+      setCurrentTime(getNow());
     }, 60000);
 
     return () => clearInterval(intervalId);
@@ -148,21 +150,23 @@ export default function ProgramScreen() {
   useEffect(() => {
     if (!timelineData) return;
 
-    const now = dayjs();
-    const today = now.format('YYYY-MM-DD');
+    const now = currentTime;
+    const dayOneStart = dayjs(timelineData.config.dayOne.start);
+    const dayOneEnd = dayjs(timelineData.config.dayOne.end);
+    const dayTwoStart = dayjs(timelineData.config.dayTwo.start);
+    const dayTwoEnd = dayjs(timelineData.config.dayTwo.end);
 
-    const dayOneStartDate = dayjs(timelineData.config.dayOne.start).format('YYYY-MM-DD');
-    const dayOneEndDate = dayjs(timelineData.config.dayOne.end).format('YYYY-MM-DD');
+    const isWithinRange = (start: dayjs.Dayjs, end: dayjs.Dayjs) =>
+      (now.isAfter(start) || now.isSame(start)) && now.isBefore(end);
 
-    const dayTwoStartDate = dayjs(timelineData.config.dayTwo.start).format('YYYY-MM-DD');
-    const dayTwoEndDate = dayjs(timelineData.config.dayTwo.end).format('YYYY-MM-DD');
-
-    if (today >= dayTwoStartDate && today <= dayTwoEndDate) {
-      setDay('dayTwo');
-    } else if (today >= dayOneStartDate && today <= dayOneEndDate) {
+    if (isWithinRange(dayOneStart, dayOneEnd)) {
       setDay('dayOne');
+    } else if (isWithinRange(dayTwoStart, dayTwoEnd)) {
+      setDay('dayTwo');
+    } else if (now.isAfter(dayOneEnd) && now.isBefore(dayTwoStart)) {
+      setDay('dayTwo');
     }
-  }, [timelineData]);
+  }, [timelineData, currentTime]);
 
   useEffect(() => {
     if (helpExpanded) {
