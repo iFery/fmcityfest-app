@@ -199,7 +199,7 @@ module.exports = ({ config }) => {
         },
         package: 'com.fmcityfest.app',
         googleServicesFile: androidGoogleServicesFile,
-        versionCode: 27, // Increment this for each release to Google Play
+        versionCode: 28, // Increment this for each release to Google Play
         permissions: [
           // Keep Expo defaults for scheduling local notifications in release builds
           'android.permission.POST_NOTIFICATIONS',

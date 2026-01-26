@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { ApiError } from '../api/client';
-import { loadFromCache, saveToCache, getCacheAge } from '../utils/cacheManager';
+import { loadFromCache, saveToCache } from '../utils/cacheManager';
 
 export interface UseCachedDataResult<T> {
   data: T;
@@ -135,18 +135,6 @@ export function useCachedData<T>({
             // Cache exists and is valid - show it immediately, no loading state
             setData(cachedData);
             setLoading(false);
-            
-            // CRITICAL FIX: Only fetch in background if cache is older than 5 minutes
-            // This prevents excessive fetches when navigating between screens
-            const cacheAge = await getCacheAge(cacheKey);
-            const FIVE_MINUTES_MS = 5 * 60 * 1000; // 5 minutes
-            
-            if (cacheAge !== null && cacheAge > FIVE_MINUTES_MS) {
-              // Cache is older than 5 minutes - refresh in background
-              fetchData(false).catch(() => {
-                // Silently fail background refresh - we already have cached data
-              });
-            }
           } else {
             // Cache exists but is invalid - fetch new data with loading
             setLoading(true);

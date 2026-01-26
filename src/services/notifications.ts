@@ -17,6 +17,24 @@ const getLeadTimeMinutes = () => {
   return Number.isFinite(minutes) && minutes > 0 ? minutes : 10;
 };
 
+type DayjsInstance = ReturnType<typeof dayjs>;
+
+const formatStageLabel = (stageName?: string | null): string => {
+  const baseLabel = stageName?.trim() || 'Stage bude upřesněna';
+  const normalized = baseLabel.toLowerCase();
+
+  if (normalized.includes('stage')) {
+    return baseLabel;
+  }
+
+  return `${baseLabel} stage`;
+};
+
+const formatStageNotificationBody = (stageName: string | undefined, eventStart: DayjsInstance): string => {
+  const stageLabel = formatStageLabel(stageName);
+  return `${stageLabel} · ${eventStart.format('HH:mm')}`;
+};
+
 /**
  * Configure notification handler
  * Must be called before any notification operations
@@ -338,9 +356,8 @@ class NotificationService {
       }
 
       const titleArtistName = artistName || event.name || 'Koncert';
-      const contentTitle = `${titleArtistName} začíná za ${leadTimeMinutes} minut!`;
-      const contentBody =
-        event.name || `${titleArtistName} na ${event.stage_name || event.stage || 'pódiu'}`;
+      const contentTitle = `${titleArtistName} za ${leadTimeMinutes} minut`;
+      const contentBody = formatStageNotificationBody(event.stage_name || event.stage, eventStart);
 
       await Notifications.scheduleNotificationAsync({
         identifier: `favorite_event_${eventId}`,
@@ -455,8 +472,8 @@ class NotificationService {
             await Notifications.scheduleNotificationAsync({
               identifier: notificationId,
               content: {
-                title: `${artistName} začíná za ${leadTimeMinutes} minut!`,
-                body: event.name || `${artistName} na ${event.stage_name || event.stage || 'pódiu'}`,
+                title: `${artistName} za ${leadTimeMinutes} minut`,
+                body: formatStageNotificationBody(event.stage_name || event.stage, eventStart),
                 data: {
                   type: 'artist',
                   artistId: artistId,
